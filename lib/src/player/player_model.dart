@@ -8,6 +8,8 @@ import '../../data.dart';
 import 'mpv_meta_data.dart';
 import 'player_service.dart';
 
+const rateValues = [1.0, 1.5, 2.0];
+
 class PlayerModel extends SafeChangeNotifier {
   final PlayerService service;
   PlayerModel({required this.service});
@@ -26,19 +28,12 @@ class PlayerModel extends SafeChangeNotifier {
   StreamSubscription<bool>? _isPlayingChangedSub;
   StreamSubscription<bool>? _durationChangedSub;
   StreamSubscription<bool>? _positionChangedSub;
+  StreamSubscription<bool>? _rateChanged;
 
   String? get queueName => service.queue.$1;
 
   List<Audio> get queue => service.queue.$2;
   MpvMetaData? get mpvMetaData => service.mpvMetaData;
-
-  bool? _fullScreen;
-  bool? get fullScreen => _fullScreen;
-  void setFullScreen(bool? value) {
-    if (value == null || value == _fullScreen) return;
-    _fullScreen = value;
-    notifyListeners();
-  }
 
   Audio? get audio => service.audio;
 
@@ -61,6 +56,9 @@ class PlayerModel extends SafeChangeNotifier {
 
   double get volume => service.volume;
   Future<void> setVolume(double value) async => await service.setVolume(value);
+
+  double get rate => service.rate;
+  Future<void> setRate(double value) async => await service.setRate(value);
 
   Future<void> play({Duration? newPosition, Audio? newAudio}) async =>
       await service.play(newAudio: newAudio, newPosition: newPosition);
@@ -90,6 +88,8 @@ class PlayerModel extends SafeChangeNotifier {
     _repeatSingleChangedSub =
         service.repeatSingleChanged.listen((_) => notifyListeners());
     _volumeChangedSub = service.volumeChanged.listen((_) => notifyListeners());
+    _rateChanged = service.rateChanged.listen((_) => notifyListeners());
+
     _isPlayingChangedSub =
         service.isPlayingChanged.listen((_) => notifyListeners());
     _durationChangedSub =
@@ -102,16 +102,25 @@ class PlayerModel extends SafeChangeNotifier {
 
   Future<void> playNext() async => await service.playNext();
 
-  Future<void> insertIntoQueue(Audio audio) async =>
-      await service.insertIntoQueue(audio);
+  void insertIntoQueue(Audio audio) async => service.insertIntoQueue(audio);
 
-  Future<void> moveAudioInQueue(int oldIndex, int newIndex) async =>
-      await service.moveAudioInQueue(oldIndex, newIndex);
+  void moveAudioInQueue(int oldIndex, int newIndex) async =>
+      service.moveAudioInQueue(oldIndex, newIndex);
+
+  void remove(Audio deleteMe) => service.remove(deleteMe);
 
   Future<void> playPrevious() async => await service.playPrevious();
 
-  Future<void> startPlaylist(Set<Audio> audios, String listName) async =>
-      await service.startPlaylist(audios, listName);
+  Future<void> startPlaylist({
+    required Set<Audio> audios,
+    required String listName,
+    int? index,
+  }) async =>
+      await service.startPlaylist(
+        audios: audios,
+        listName: listName,
+        index: index,
+      );
 
   Color? get color => service.color;
 
@@ -139,6 +148,7 @@ class PlayerModel extends SafeChangeNotifier {
     await _isPlayingChangedSub?.cancel();
     await _durationChangedSub?.cancel();
     await _positionChangedSub?.cancel();
+    await _rateChanged?.cancel();
     super.dispose();
   }
 }

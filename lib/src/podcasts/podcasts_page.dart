@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:podcast_search/podcast_search.dart';
 import 'package:provider/provider.dart';
 import 'package:yaru_widgets/yaru_widgets.dart';
 
 import '../../app.dart';
 import '../../build_context_x.dart';
 import '../../common.dart';
+import '../../constants.dart';
 import '../../data.dart';
 import '../../player.dart';
 import '../../podcasts.dart';
-import '../common/loading_grid.dart';
 import '../l10n/l10n.dart';
 import '../library/library_model.dart';
 import 'podcasts_collection_body.dart';
@@ -50,22 +51,15 @@ class _PodcastsPageState extends State<PodcastsPage> {
     }
 
     final model = context.read<PodcastModel>();
+    final searchResult = context.select((PodcastModel m) => m.searchResult);
+
     final searchActive = context.select((PodcastModel m) => m.searchActive);
     final setSearchActive = model.setSearchActive;
-    final startPlaylist = context.read<PlayerModel>().startPlaylist;
     final theme = context.t;
     final libraryModel = context.read<LibraryModel>();
-    final podcastSubscribed = libraryModel.podcastSubscribed;
-    final removePodcast = libraryModel.removePodcast;
-    final addPodcast = libraryModel.addPodcast;
-    final setPodcastIndex = libraryModel.setPodcastIndex;
-    final podcastIndex = context.select((LibraryModel m) => m.podcastIndex);
 
-    final setLimit = model.setLimit;
-    final setSelectedFeedUrl = model.setSelectedFeedUrl;
-    final selectedFeedUrl =
-        context.select((PodcastModel m) => m.selectedFeedUrl);
     final limit = context.select((PodcastModel m) => m.limit);
+    final setLimit = model.setLimit;
 
     final search = model.search;
     final setSearchQuery = model.setSearchQuery;
@@ -73,7 +67,7 @@ class _PodcastsPageState extends State<PodcastsPage> {
         theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500);
     final buttonStyle = TextButton.styleFrom(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(100),
       ),
     );
 
@@ -87,37 +81,17 @@ class _PodcastsPageState extends State<PodcastsPage> {
     final checkingForUpdates =
         context.select((PodcastModel m) => m.checkingForUpdates);
 
-    final setCountry = model.setCountry;
+    void setCountry(Country? country) {
+      model.setCountry(country);
+      libraryModel.setLastCountryCode(country?.code);
+    }
+
     final podcastGenre = context.select((PodcastModel m) => m.podcastGenre);
     final sortedGenres = context.select((PodcastModel m) => m.sortedGenres);
     final setPodcastGenre = model.setPodcastGenre;
-    final searchResult = context.select((PodcastModel m) => m.searchResult);
 
     final showWindowControls =
         context.select((AppModel a) => a.showWindowControls);
-
-    void onTapText(String text) {
-      setSearchQuery(text);
-      search(searchQuery: text);
-    }
-
-    Widget grid;
-    if (searchResult == null || checkingForUpdates) {
-      grid = LoadingGrid(limit: limit);
-    } else if (searchResult.items.isEmpty == true) {
-      grid = NoSearchResultPage(message: Text(context.l10n.noPodcastFound));
-    } else {
-      grid = PodcastsDiscoverGrid(
-        searchResult: searchResult,
-        startPlaylist: startPlaylist,
-        podcastSubscribed: podcastSubscribed,
-        removePodcast: removePodcast,
-        addPodcast: addPodcast,
-        setSelectedFeedUrl: setSelectedFeedUrl,
-        selectedFeedUrl: selectedFeedUrl,
-        onTapText: onTapText,
-      );
-    }
 
     final controlPanel = PodcastsControlPanel(
       limit: limit,
@@ -141,64 +115,60 @@ class _PodcastsPageState extends State<PodcastsPage> {
         const SizedBox(
           height: 15,
         ),
-        Expanded(child: grid),
+        Expanded(
+          child: PodcastsDiscoverGrid(
+            searchResult: searchResult,
+            checkingForUpdates: checkingForUpdates,
+            limit: limit,
+            incrementLimit: () async {
+              setLimit(limit + 20);
+              await search();
+            },
+          ),
+        ),
       ],
     );
 
     final subsBody = PodcastsCollectionBody(
       loading: checkingForUpdates,
       isOnline: widget.isOnline,
-      startPlaylist: startPlaylist,
-      onTapText: onTapText,
-      addPodcast: addPodcast,
-      removePodcast: removePodcast,
     );
 
-    return DefaultTabController(
-      initialIndex: podcastIndex ?? 1,
-      length: 2,
-      child: Scaffold(
-        appBar: HeaderBar(
-          leading: (Navigator.canPop(context))
-              ? NavBackButton(
-                  onPressed: () {
-                    setSearchActive(false);
-                  },
-                )
-              : const SizedBox.shrink(),
-          titleSpacing: 0,
-          style: showWindowControls
-              ? YaruTitleBarStyle.normal
-              : YaruTitleBarStyle.undecorated,
-          actions: [
-            Flexible(
-              child: Padding(
-                padding: appBarActionSpacing,
-                child: SearchButton(
-                  active: searchActive,
-                  onPressed: () => setSearchActive(!searchActive),
-                ),
+    return Scaffold(
+      appBar: HeaderBar(
+        leading: (Navigator.canPop(context))
+            ? NavBackButton(
+                onPressed: () {
+                  setSearchActive(false);
+                },
+              )
+            : const SizedBox.shrink(),
+        titleSpacing: 0,
+        style: showWindowControls
+            ? YaruTitleBarStyle.normal
+            : YaruTitleBarStyle.undecorated,
+        actions: [
+          Flexible(
+            child: Padding(
+              padding: appBarActionSpacing,
+              child: SearchButton(
+                active: searchActive,
+                onPressed: () => setSearchActive(!searchActive),
               ),
             ),
-          ],
-          title: PodcastsPageTitle(
-            onIndexSelected: setPodcastIndex,
-            searchActive: searchActive,
-            searchQuery: searchQuery,
-            setSearchActive: setSearchActive,
-            setSearchQuery: setSearchQuery,
-            search: search,
           ),
-        ),
-        body: Padding(
-          padding: tabViewPadding,
-          child: TabBarView(
-            children: [
-              subsBody,
-              searchBody,
-            ],
-          ),
-        ),
+        ],
+        title: searchActive
+            ? PodcastsPageTitle(
+                searchQuery: searchQuery,
+                setSearchQuery: setSearchQuery,
+                search: search,
+              )
+            : Text('${context.l10n.podcasts} ${context.l10n.collection}'),
+      ),
+      body: Padding(
+        padding: tabViewPadding,
+        child: searchActive ? searchBody : subsBody,
       ),
     );
   }
@@ -231,6 +201,9 @@ class PodcastsPageIcon extends StatelessWidget {
       );
     }
 
-    return selected ? Icon(Iconz().podcastFilled) : Icon(Iconz().podcast);
+    return Padding(
+      padding: kMainPageIconPadding,
+      child: selected ? Icon(Iconz().podcastFilled) : Icon(Iconz().podcast),
+    );
   }
 }

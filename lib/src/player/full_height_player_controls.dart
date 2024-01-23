@@ -2,24 +2,25 @@ import 'package:flutter/material.dart';
 
 import '../../build_context_x.dart';
 import '../../common.dart';
-import '../../data.dart';
 import 'play_button.dart';
+import 'playback_rate_button.dart';
 import 'repeat_button.dart';
+import 'seek_button.dart';
 import 'shuffle_button.dart';
 
 class FullHeightPlayerControls extends StatelessWidget {
   const FullHeightPlayerControls({
     super.key,
-    this.audio,
     required this.playPrevious,
     required this.playNext,
     required this.active,
+    required this.showPlaybackRate,
   });
 
-  final Audio? audio;
   final Future<void> Function() playPrevious;
   final Future<void> Function() playNext;
   final bool active;
+  final bool showPlaybackRate;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +32,14 @@ class FullHeightPlayerControls extends StatelessWidget {
       spacing: spacing,
       runSpacing: spacing,
       children: [
-        ShuffleButton(active: active),
+        if (showPlaybackRate)
+          PlaybackRateButton(active: active)
+        else
+          ShuffleButton(active: active),
+        SeekButton(
+          active: active,
+          forward: false,
+        ),
         IconButton(
           onPressed: !active ? null : () => playPrevious(),
           icon: Icon(Iconz().skipBackward),
@@ -48,6 +56,7 @@ class FullHeightPlayerControls extends StatelessWidget {
           onPressed: !active ? null : () => playNext(),
           icon: Icon(Iconz().skipForward),
         ),
+        SeekButton(active: active),
         RepeatButton(active: active),
       ],
     );

@@ -9,6 +9,7 @@ import '../../constants.dart';
 import '../../data.dart';
 import '../../string_x.dart';
 import '../../utils.dart';
+import 'radio_search.dart';
 import 'radio_service.dart';
 
 class RadioModel extends SafeChangeNotifier {
@@ -18,15 +19,14 @@ class RadioModel extends SafeChangeNotifier {
 
   StreamSubscription<bool>? _stationsSub;
   StreamSubscription<bool>? _statusCodeSub;
-  StreamSubscription<bool>? _searchSub;
   StreamSubscription<bool>? _tagsSub;
 
   Country? _country;
   Country? get country => _country;
   void setCountry(Country? value) {
-    if (value == _country || value == null) return;
+    if (value == _country) return;
     _country = value;
-    notifyListeners();
+    loadQueryBySearch(RadioSearch.country);
   }
 
   List<Country> get sortedCountries {
@@ -46,18 +46,31 @@ class RadioModel extends SafeChangeNotifier {
   void setTag(Tag? value) {
     if (value == _tag) return;
     _tag = value;
-    notifyListeners();
+    loadQueryBySearch(RadioSearch.tag);
   }
 
-  Set<Audio>? get stations {
-    if (_radioService.stations == null) return null;
+  Future<Set<Audio>?> getStations({
+    String? country,
+    String? name,
+    String? state,
+    Tag? tag,
+    int limit = 100,
+  }) async {
+    final s = await _radioService.getStations(
+      tag: tag,
+      name: name,
+      country: country?.camelToSentence(),
+      state: state,
+      limit: limit,
+    );
+    if (s == null) return null;
 
-    if (_radioService.stations!.isEmpty) {
+    if (s.isEmpty) {
       return <Audio>{};
     }
 
     return Set.from(
-      _radioService.stations!.map(
+      s.map(
         (e) {
           var artist = e.bitrate == 0 ? '' : '${e.bitrate} kb/s';
           if (e.language?.isNotEmpty == true) {
@@ -87,94 +100,77 @@ class RadioModel extends SafeChangeNotifier {
     notifyListeners();
   }
 
-  bool? _connected;
-  bool? get connected => _connected;
-
-  bool _initialized = false;
-  Future<void> init({
+  String? _connectedHost;
+  Future<String?> init({
     required String? countryCode,
-    required bool isOnline,
+    required int index,
   }) async {
-    if (_initialized && _connected == true) return Future.value();
+    _connectedHost ??= await _radioService.init();
 
+    final lastCountryCode = (await readSetting(kLastCountryCode)) as String?;
     final lastFav = (await readSetting(kLastFav)) as String?;
 
-    _connected = await _radioService.init(isOnline);
-
-    _stationsSub =
-        _radioService.stationsChanged.listen((_) => notifyListeners());
-
-    _statusCodeSub =
+    _statusCodeSub ??=
         _radioService.statusCodeChanged.listen((_) => notifyListeners());
+    _tagsSub ??= _radioService.tagsChanged.listen((_) => notifyListeners());
+    _country ??= Country.values
+        .firstWhereOrNull((c) => c.code == (lastCountryCode ?? countryCode));
 
-    _searchSub =
-        _radioService.searchQueryChanged.listen((_) => notifyListeners());
-
-    _tagsSub = _radioService.tagsChanged.listen((_) => notifyListeners());
-
-    _country ??= Country.values.firstWhereOrNull((c) => c.code == countryCode);
-
-    if (connected == true) {
+    if (_connectedHost?.isNotEmpty == true) {
       await _radioService.loadTags();
       _tag ??= lastFav == null || tags == null || tags!.isEmpty
           ? null
           : tags!.firstWhere((t) => t.name.contains(lastFav));
-
-      if (stations == null) {
-        if (_tag != null) {
-          await loadStationsByTag();
-        } else {
-          await loadStationsByCountry();
-        }
-      }
     }
 
-    _initialized = true;
+    loadQueryBySearch(RadioSearch.values[index]);
 
+    return _connectedHost;
+  }
+
+  void loadQueryBySearch(RadioSearch search) {
+    switch (search) {
+      case RadioSearch.country:
+        _searchQuery = country?.name;
+        break;
+      case RadioSearch.tag:
+        _searchQuery = _tag?.name;
+      case RadioSearch.name:
+        _searchQuery = _searchQuery;
+      case RadioSearch.state:
+        _searchQuery = state;
+      default:
+    }
     notifyListeners();
   }
 
-  Future<void> loadStationsByCountry() async {
-    return await _radioService.loadStations(
-      country: country?.name.camelToSentence(),
-      limit: limit,
-    );
+  String? _searchQuery;
+  String? get searchQuery => _searchQuery;
+  void setSearchQuery(String? value) {
+    if (value == _searchQuery) return;
+    _searchQuery = value;
+    notifyListeners();
   }
 
-  Future<void> loadStationsByTag() async {
-    await _radioService.loadStations(tag: tag, limit: limit);
+  String? _state;
+  String? get state => _state;
+  void setState(String? value) {
+    if (value == _state) return;
+    _state = value;
+    notifyListeners();
   }
 
-  Future<void> search({String? name, String? tag}) async {
-    if (name?.isNotEmpty == true) {
-      setTag(null);
-      await _radioService.loadStations(name: name, limit: limit);
-    } else if (tag?.isNotEmpty == true) {
-      await _radioService.loadStations(
-        tag: Tag(name: tag!, stationCount: 1),
-        limit: limit,
-      );
-    } else {
-      setTag(null);
-      await loadStationsByCountry();
-    }
-  }
-
-  String? get searchQuery => _radioService.searchQuery;
-  void setSearchQuery(String? value) => _radioService.setSearchQuery(value);
-
-  bool _searchActive = false;
-  bool get searchActive => _searchActive;
-  void setSearchActive(bool value) {
-    if (value == _searchActive) return;
-    _searchActive = value;
+  bool _showTags = false;
+  bool get showTags => _showTags;
+  void setShowTags(bool value) {
+    if (value == _showTags) return;
+    _showTags = value;
     notifyListeners();
   }
 
   @override
   void dispose() {
     _stationsSub?.cancel();
-    _searchSub?.cancel();
     _tagsSub?.cancel();
     _statusCodeSub?.cancel();
     super.dispose();

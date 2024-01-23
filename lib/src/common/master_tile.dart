@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:yaru_widgets/yaru_widgets.dart';
 
 import '../../build_context_x.dart';
+import '../../common.dart';
 import '../../constants.dart';
+import '../../l10n.dart';
+import '../../library.dart';
+import '../../player.dart';
 
-class MasterTile extends StatefulWidget {
+class MasterTile extends StatelessWidget {
   const MasterTile({
     super.key,
-    required this.onTap,
     this.selected,
     this.leading,
     required this.title,
     this.subtitle,
     this.trailing,
-    this.onPlay,
-    required this.iconData,
+    required this.libraryModel,
+    required this.pageId,
   });
 
   final bool? selected;
@@ -22,30 +26,136 @@ class MasterTile extends StatefulWidget {
   final Widget? title;
   final Widget? subtitle;
   final Widget? trailing;
-  final void Function()? onTap;
-  final void Function()? onPlay;
-  final IconData iconData;
-
-  @override
-  State<MasterTile> createState() => _MasterTileState();
-}
-
-class _MasterTileState extends State<MasterTile> {
-  var _hovered = false;
+  final LibraryModel libraryModel;
+  final String pageId;
 
   @override
   Widget build(BuildContext context) {
-    final yaruMasterTile = YaruMasterTile(
-      title: widget.title,
-      onTap: widget.onTap,
-      selected: widget.selected,
-      leading: widget.leading,
-      subtitle: widget.subtitle,
-      trailing: widget.trailing,
+    final yaruMasterTile = Padding(
+      padding: pageId == kLocalAudioPageId
+          ? const EdgeInsets.only(top: 5)
+          : EdgeInsets.zero,
+      child: YaruMasterTile(
+        title: title,
+        onTap: pageId == kNewPlaylistPageId
+            ? () => showDialog(
+                  context: context,
+                  builder: (context) {
+                    return PlaylistDialog(
+                      playlistName: context.l10n.createNewPlaylist,
+                      allowCreate: true,
+                      libraryModel: libraryModel,
+                    );
+                  },
+                )
+            : null,
+        selected: selected,
+        leading: leading,
+        subtitle: subtitle,
+        trailing: trailing,
+      ),
     );
 
-    if (widget.onPlay == null) {
-      return yaruMasterTile;
+    final Widget tile;
+    if (pageId == kNewPlaylistPageId) {
+      tile = _FramedMasterTile(tile: yaruMasterTile);
+    } else {
+      tile = yaruMasterTile;
+    }
+
+    return _PlayAbleMasterTile(
+      selected: selected,
+      pageId: pageId,
+      tile: tile,
+      libraryModel: libraryModel,
+    );
+  }
+}
+
+class _FramedMasterTile extends StatelessWidget {
+  const _FramedMasterTile({
+    required this.tile,
+  });
+
+  final Widget tile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SpacedDivider(
+          top: 10,
+          bottom: 10,
+          right: 0,
+          left: 0,
+        ),
+        tile,
+        const SpacedDivider(
+          top: 10,
+          bottom: 10,
+          right: 0,
+          left: 0,
+        ),
+      ],
+    );
+  }
+}
+
+class _PlayAbleMasterTile extends StatefulWidget {
+  const _PlayAbleMasterTile({
+    required this.pageId,
+    required this.tile,
+    this.selected,
+    required this.libraryModel,
+  });
+
+  final String pageId;
+  final Widget tile;
+  final bool? selected;
+  final LibraryModel libraryModel;
+
+  @override
+  State<_PlayAbleMasterTile> createState() => __PlayAbleMasterTileState();
+}
+
+class __PlayAbleMasterTileState extends State<_PlayAbleMasterTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final audios = widget.libraryModel.getAudiosById(widget.pageId);
+
+    if (audios == null || audios.isEmpty) {
+      return widget.tile;
+    }
+
+    final isEnQueued = context.select(
+      (PlayerModel m) => m.queueName != null && m.queueName == widget.pageId,
+    );
+    final isPlaying = context.select(
+      (PlayerModel m) => m.isPlaying,
+    );
+
+    final playerModel = context.read<PlayerModel>();
+
+    void onPlay() {
+      if (isEnQueued) {
+        isPlaying ? playerModel.pause() : playerModel.resume();
+      } else {
+        playerModel
+            .startPlaylist(
+              audios: audios,
+              listName: widget.pageId,
+            )
+            .then(
+              (_) => widget.libraryModel.removePodcastUpdate(
+                widget.pageId,
+              ),
+            );
+      }
     }
 
     return MouseRegion(
@@ -53,7 +163,7 @@ class _MasterTileState extends State<MasterTile> {
       onExit: (e) => setState(() => _hovered = false),
       child: Stack(
         children: [
-          yaruMasterTile,
+          widget.tile,
           if (_hovered || widget.selected == true)
             Positioned(
               right: 25,
@@ -61,9 +171,11 @@ class _MasterTileState extends State<MasterTile> {
               child: CircleAvatar(
                 radius: kTinyButtonSize / 2,
                 child: IconButton(
-                  onPressed: widget.onPlay,
+                  onPressed: onPlay,
                   icon: Icon(
-                    widget.iconData,
+                    isPlaying && isEnQueued
+                        ? Iconz().pause
+                        : Iconz().playFilled,
                     size: kTinyButtonIconSize,
                     color: context.t.colorScheme.primary,
                   ),

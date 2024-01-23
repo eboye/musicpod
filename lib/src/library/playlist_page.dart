@@ -1,33 +1,67 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../common.dart';
 import '../../data.dart';
+import '../../library.dart';
+import '../../local_audio.dart';
+import '../../utils.dart';
 import '../common/fall_back_header_image.dart';
 import '../l10n/l10n.dart';
 import '../theme.dart';
-import 'playlist_dialog.dart';
 
 class PlaylistPage extends StatelessWidget {
   const PlaylistPage({
     super.key,
     required this.playlist,
-    required this.unPinPlaylist,
-    this.onTextTap,
-    this.updatePlaylistName,
+    required this.libraryModel,
   });
 
   final MapEntry<String, Set<Audio>> playlist;
-  final void Function(String playlist) unPinPlaylist;
-  final void Function(String oldName, String newName)? updatePlaylistName;
-  final void Function({
-    required String text,
-    required AudioType audioType,
-  })? onTextTap;
+  final LibraryModel libraryModel;
 
   @override
   Widget build(BuildContext context) {
+    final model = context.read<LocalAudioModel>();
+    final libraryModel = context.read<LibraryModel>();
     return AudioPage(
-      onTextTap: onTextTap,
+      onAlbumTap: ({required audioType, required text}) {
+        final albumAudios = model.findAlbum(Audio(album: text));
+        if (albumAudios?.firstOrNull == null) return;
+        final id = generateAlbumId(albumAudios!.first);
+        if (id == null) return;
+
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) {
+              return AlbumPage(
+                isPinnedAlbum: libraryModel.isPinnedAlbum,
+                removePinnedAlbum: libraryModel.removePinnedAlbum,
+                addPinnedAlbum: libraryModel.addPinnedAlbum,
+                id: id,
+                album: albumAudios,
+              );
+            },
+          ),
+        );
+      },
+      onArtistTap: ({required audioType, required text}) {
+        final artistAudios = model.findArtist(Audio(artist: text));
+        final images = model.findImages(artistAudios ?? {});
+
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) {
+              return ArtistPage(
+                images: images,
+                artistAudios: artistAudios,
+              );
+            },
+          ),
+        );
+      },
+      showAudioTileHeader:
+          playlist.value.any((e) => e.audioType != AudioType.podcast),
       audioPageType: AudioPageType.playlist,
       image: FallBackHeaderImage(
         color: getAlphabetColor(playlist.key),
@@ -48,9 +82,9 @@ class PlaylistPage extends StatelessWidget {
           builder: (context) => PlaylistDialog(
             playlistName: playlist.key,
             initialValue: playlist.key,
-            onDeletePlaylist: () => unPinPlaylist(playlist.key),
-            onUpdatePlaylistName: (name) =>
-                updatePlaylistName!(playlist.key, name),
+            allowDelete: true,
+            allowRename: true,
+            libraryModel: libraryModel,
           ),
         ),
       ),

@@ -38,6 +38,8 @@ class PlayerService {
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<bool>? _isCompletedSub;
   StreamSubscription<double>? _volumeSub;
+  StreamSubscription<Tracks>? _tracksSub;
+  StreamSubscription<double>? _rateSub;
 
   final _queueController = StreamController<bool>.broadcast();
   Stream<bool> get queueChanged => _queueController.stream;
@@ -46,6 +48,8 @@ class PlayerService {
   void setQueue((String, List<Audio>) value) {
     if (value == _queue || value.$2.isEmpty) return;
     _queue = value;
+    libraryService.setQueue(_queue.$2);
+    libraryService.setQueueName(_queue.$1);
     _queueController.add(true);
   }
 
@@ -63,31 +67,19 @@ class PlayerService {
   Stream<bool> get audioChanged => _audioController.stream;
   Audio? _audio;
   Audio? get audio => _audio;
-  Future<void> _setAudio(Audio? value) async {
-    if (value == null || value == _audio) return;
+  void _setAudio(Audio value) async {
+    if (value == _audio) return;
     _audio = value;
     libraryService.setLastAudio(value);
-    _setIsVideo();
-
     _audioController.add(true);
   }
 
   final _isVideoController = StreamController<bool>.broadcast();
   Stream<bool> get isVideoChanged => _isVideoController.stream;
-  void _setIsVideo() {
-    _isVideo = false;
-    for (var t in _videoTypes) {
-      if (audio?.url?.contains(t) == true) {
-        _isVideo = true;
-        break;
-      }
-    }
-  }
 
   bool? _isVideo;
   bool? get isVideo => _isVideo;
-  void setIsVideo(bool? value) {
-    if (value == _isVideo) return;
+  void _setIsVideo(bool? value) {
     _isVideo = value;
     _isVideoController.add(true);
   }
@@ -170,31 +162,31 @@ class PlayerService {
     await player.setVolume(value);
   }
 
+  final _rateController = StreamController<bool>.broadcast();
+  Stream<bool> get rateChanged => _rateController.stream;
+  double _rate = 1.0;
+  double get rate => _rate;
+  Future<void> setRate(double value) async {
+    if (value == _rate) return;
+    await player.setRate(value);
+  }
+
   bool _firstPlay = true;
   Future<void> play({Duration? newPosition, Audio? newAudio}) async {
-    final currentIndex =
-        (audio == null || queue.$2.isEmpty || !queue.$2.contains(audio!))
-            ? 0
-            : queue.$2.indexOf(audio!);
     if (newAudio != null) {
       _setAudio(newAudio);
     }
     if (audio == null) return;
 
-    if (!queue.$2.contains(audio)) {
-      queue.$2.insert(currentIndex, audio!);
-      if (queue.$2.length > 1) {
-        nextAudio = queue.$2[1];
-      }
-    }
-    final playList = Playlist([
-      if (audio!.path != null)
-        Media('file://${audio!.path!}')
-      else if (audio!.url != null)
-        Media(audio!.url!),
-    ]);
-
-    player.open(playList);
+    Media? media = audio!.path != null
+        ? Media('file://${audio!.path!}')
+        : (audio!.url != null)
+            ? Media(audio!.url!)
+            : null;
+    if (media == null) return;
+    player.open(media).then((_) {
+      player.state.tracks;
+    });
     if (newPosition != null && _audio!.audioType != AudioType.radio) {
       player.setVolume(0).then(
             (_) => Future.delayed(const Duration(seconds: 3)).then(
@@ -223,7 +215,7 @@ class PlayerService {
 
   Future<void> resume() async {
     if (audio == null) return;
-    await player.playOrPause();
+    await playOrPause();
   }
 
   Future<void> init() async {
@@ -258,26 +250,43 @@ class PlayerService {
       _volume = value;
       _volumeController.add(true);
     });
+
+    _rateSub = player.stream.rate.listen((value) {
+      _rate = value;
+      _rateController.add(true);
+    });
+
+    _tracksSub = player.stream.tracks.listen((tracks) {
+      _setIsVideo(false);
+      for (var track in tracks.video) {
+        if (track.fps != null && track.fps! > 1) {
+          _setIsVideo(true);
+          break;
+        }
+      }
+    });
   }
 
   Future<void> playNext() async {
     safeLastPosition();
     if (!repeatSingle && nextAudio != null) {
-      _setAudio(nextAudio);
+      _setAudio(nextAudio!);
       _estimateNext();
     }
     await play();
   }
 
-  Future<void> insertIntoQueue(Audio audio) async {
-    if (_queue.$2.isNotEmpty && !_queue.$2.contains(audio) && _audio != null) {
+  void insertIntoQueue(Audio newAudio) {
+    if (_queue.$2.isNotEmpty &&
+        !_queue.$2.contains(newAudio) &&
+        _audio != null) {
       final currentIndex = queue.$2.indexOf(_audio!);
-      _queue.$2.insert(currentIndex + 1, audio);
-      nextAudio = queue.$2[currentIndex + 1];
+      _queue.$2.insert(currentIndex + 1, newAudio);
+      nextAudio = newAudio;
     }
   }
 
-  Future<void> moveAudioInQueue(int oldIndex, int newIndex) async {
+  void moveAudioInQueue(int oldIndex, int newIndex) {
     if (_queue.$2.isNotEmpty && newIndex < _queue.$2.length) {
       if (oldIndex < newIndex) {
         newIndex -= 1;
@@ -290,6 +299,12 @@ class PlayerService {
 
       _queueController.add(true);
     }
+  }
+
+  void remove(Audio deleteMe) {
+    _queue.$2.remove(deleteMe);
+    _estimateNext();
+    _queueController.add(true);
   }
 
   void _estimateNext() {
@@ -326,21 +341,41 @@ class PlayerService {
     if (queue.$2.isNotEmpty == true &&
         audio != null &&
         queue.$2.contains(audio)) {
-      final currentIndex = queue.$2.indexOf(audio!);
-
-      if (currentIndex == 0) {
-        return;
+      if (position != null && position!.inSeconds > 10) {
+        setPosition(Duration.zero);
+        await seek();
+      } else {
+        final currentIndex = queue.$2.indexOf(audio!);
+        if (currentIndex == 0) {
+          return;
+        }
+        final mightBePrevious = queue.$2.elementAtOrNull(currentIndex - 1);
+        if (mightBePrevious == null) return;
+        _setAudio(mightBePrevious);
+        _estimateNext();
+        await play();
       }
-      _setAudio(queue.$2.elementAt(currentIndex - 1));
-      nextAudio = queue.$2.elementAt(queue.$2.indexOf(audio!) + 1);
-
-      await play();
     }
   }
 
-  Future<void> startPlaylist(Set<Audio> audios, String listName) async {
-    setQueue((listName, audios.toList()));
-    _setAudio(audios.first);
+  Future<void> startPlaylist({
+    required Set<Audio> audios,
+    required String listName,
+    int? index,
+  }) async {
+    if (listName == _queue.$1 &&
+        index != null &&
+        audios.elementAtOrNull(index) != null) {
+      _setAudio(audios.elementAtOrNull(index)!);
+    } else {
+      setQueue((listName, audios.toList()));
+      _setAudio(
+        (index != null && audios.elementAtOrNull(index) != null)
+            ? audios.elementAtOrNull(index)!
+            : audios.first,
+      );
+    }
+
     _position = libraryService.getLastPosition.call(_audio?.url);
     _estimateNext();
     await play(newPosition: _position);
@@ -350,7 +385,11 @@ class PlayerService {
   Color? get color => _color;
 
   Future<void> _loadColor() async {
-    if (audio == null) return;
+    if (audio == null) {
+      _color = kCardColorDark;
+      return;
+    }
+
     if (audio?.path != null && audio?.pictureData != null) {
       final image = MemoryImage(
         audio!.pictureData!,
@@ -371,19 +410,24 @@ class PlayerService {
   Future<void> _readPlayerState() async {
     final playerState = await libraryService.readPlayerState();
 
-    if (playerState.$1 != null) {
-      setPosition(playerState.$1!);
-    }
-    if (playerState.$2 != null) {
-      setDuration(playerState.$2);
-    }
-    if (playerState.$3 != null) {
-      _audio = playerState.$3;
+    if (playerState?.audio != null) {
+      _setAudio(playerState!.audio!);
 
-      if (_audio != null) {
-        await _setMediaControlsMetaData(audio!);
+      if (playerState.duration != null) {
+        setDuration(parseDuration(playerState.duration!));
       }
-      _setIsVideo();
+      if (playerState.position != null) {
+        setPosition(parseDuration(playerState.position!));
+      }
+
+      if (playerState.queue?.isNotEmpty == true &&
+          playerState.queueName?.isNotEmpty == true) {
+        setQueue((playerState.queueName!, playerState.queue!));
+      }
+
+      _estimateNext();
+
+      await _setMediaControlsMetaData(playerState.audio!);
     }
   }
 
@@ -568,8 +612,10 @@ class PlayerService {
         albumArtist: audio.artist,
         artist: audio.artist,
         thumbnail: audio.audioType == AudioType.local
-            ? artUri?.toFilePath(windows: true)
-            : '$artUri',
+            ? kFallbackThumbnail
+            : artUri == null
+                ? null
+                : '$artUri',
       ),
     );
   }
@@ -624,43 +670,10 @@ class PlayerService {
     await _durationSub?.cancel();
     await _isCompletedSub?.cancel();
     await _volumeSub?.cancel();
+    await _tracksSub?.cancel();
+    await _rateSub?.cancel();
+    await _rateController.close();
+
     await player.dispose();
   }
 }
-
-Set<String> _videoTypes = {
-  '.3g2',
-  '.3gp',
-  '.aaf',
-  '.asf',
-  '.avchd',
-  '.avi',
-  '.drc',
-  '.flv',
-  '.m2v',
-  '.m3u8',
-  '.m4p',
-  '.m4v',
-  '.mkv',
-  '.mng',
-  '.mov',
-  '.mp2',
-  '.mp4',
-  '.mpe',
-  '.mpeg',
-  '.mpg',
-  '.mpv',
-  '.mxf',
-  '.nsv',
-  '.ogg',
-  '.ogv',
-  '.qt',
-  '.rm',
-  '.rmvb',
-  '.roq',
-  '.svi',
-  '.vob',
-  '.webm',
-  '.wmv',
-  '.yuv',
-};

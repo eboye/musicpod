@@ -7,35 +7,27 @@ import 'package:radio_browser_api/radio_browser_api.dart';
 import '../../constants.dart';
 
 class RadioService {
-  RadioBrowserApi? radioBrowserApi;
+  RadioBrowserApi? _radioBrowserApi;
 
   RadioService();
 
-  Future<bool> init(bool isOnline) async {
-    if (isOnline) {
-      if (radioBrowserApi == null) {
-        final hosts = await _findHost();
-        if (hosts.isEmpty) {
-          return false;
-        }
+  Future<String?> init() async {
+    if (_radioBrowserApi?.host != null) {
+      return _radioBrowserApi?.host;
+    }
 
-        for (var host in hosts) {
-          try {
-            if (radioBrowserApi != null) {
-              return true;
-            } else {
-              radioBrowserApi = RadioBrowserApi.fromHost(host);
-            }
-            // ignore: unused_catch_clause
-          } on Exception catch (e) {
-            return false;
-          }
+    for (var host in (await _findHost())) {
+      try {
+        _radioBrowserApi ??= RadioBrowserApi.fromHost(host);
+        if (_radioBrowserApi != null) {
+          return _radioBrowserApi?.host;
         }
-      } else {
-        return true;
+      } on Exception catch (e) {
+        setStatusCode(e.toString());
       }
     }
-    return false;
+
+    return null;
   }
 
   Future<List<String>> _findHost() async {
@@ -62,9 +54,8 @@ class RadioService {
   }
 
   Future<void> dispose() async {
-    _searchController.close();
+    // _searchController.close();
     _tagsChangedController.close();
-    _stationsChangedController.close();
     _statusCodeController.close();
   }
 
@@ -78,34 +69,21 @@ class RadioService {
   final _statusCodeController = StreamController<bool>.broadcast();
   Stream<bool> get statusCodeChanged => _statusCodeController.stream;
 
-  List<Station>? _stations;
-  List<Station>? get stations => _stations;
-  void setStations(List<Station>? value) {
-    _stations = value;
-    _stationsChangedController.add(true);
-  }
-
-  final _stationsChangedController = StreamController<bool>.broadcast();
-  Stream<bool> get stationsChanged => _stationsChangedController.stream;
-
-  Future<void> loadStations({
+  Future<List<Station>?> getStations({
     String? country,
     String? name,
     String? state,
     Tag? tag,
     int limit = 100,
   }) async {
-    if (radioBrowserApi == null) {
-      setStatusCode('503');
-      setStations([]);
-      return;
+    if (_radioBrowserApi == null) {
+      return [];
     }
-    setStatusCode(null);
 
     RadioBrowserListResponse<Station>? response;
     try {
       if (name?.isEmpty == false) {
-        response = await radioBrowserApi!.getStationsByName(
+        response = await _radioBrowserApi!.getStationsByName(
           name: name!,
           parameters: InputParameters(
             hidebroken: true,
@@ -114,7 +92,7 @@ class RadioService {
           ),
         );
       } else if (country?.isEmpty == false) {
-        response = await radioBrowserApi!.getStationsByCountry(
+        response = await _radioBrowserApi!.getStationsByCountry(
           country: country!,
           parameters: InputParameters(
             hidebroken: true,
@@ -123,7 +101,7 @@ class RadioService {
           ),
         );
       } else if (tag != null) {
-        response = await radioBrowserApi!.getStationsByTag(
+        response = await _radioBrowserApi!.getStationsByTag(
           tag: tag.name,
           parameters: InputParameters(
             hidebroken: true,
@@ -132,7 +110,7 @@ class RadioService {
           ),
         );
       } else if (state?.isEmpty == false) {
-        response = await radioBrowserApi!.getStationsByState(
+        response = await _radioBrowserApi!.getStationsByState(
           state: state!,
           parameters: InputParameters(
             hidebroken: true,
@@ -141,15 +119,12 @@ class RadioService {
           ),
         );
       }
-      if (response != null) {
-        setStations(response.items);
-        setStatusCode(response.statusCode.toString());
-      }
     } on Exception catch (e) {
       if (e is SocketException) {
-        setStations([]);
+        return [];
       }
     }
+    return response?.items;
   }
 
   List<Tag>? _tags;
@@ -163,12 +138,12 @@ class RadioService {
   Stream<bool> get tagsChanged => _tagsChangedController.stream;
 
   Future<void> loadTags() async {
-    if (radioBrowserApi == null) return;
+    if (_radioBrowserApi == null) return;
     try {
-      final response = await radioBrowserApi!.getTags(
+      final response = await _radioBrowserApi!.getTags(
         parameters: const InputParameters(
           hidebroken: true,
-          limit: 300,
+          limit: 500,
           order: 'stationcount',
           reverse: true,
         ),
@@ -181,13 +156,12 @@ class RadioService {
     }
   }
 
-  String? _searchQuery;
-  String? get searchQuery => _searchQuery;
-  final _searchController = StreamController<bool>.broadcast();
-  Stream<bool> get searchQueryChanged => _searchController.stream;
-  void setSearchQuery(String? value) {
-    if (value == _searchQuery) return;
-    _searchQuery = value;
-    _searchController.add(true);
-  }
+  // String? _searchQuery;
+  // String? get searchQuery => _searchQuery;
+  // final _searchController = StreamController<bool>.broadcast();
+  // Stream<bool> get searchQueryChanged => _searchController.stream;
+  // void setSearchQuery(String? value) {
+  //   _searchQuery = value;
+  //   _searchController.add(true);
+  // }
 }

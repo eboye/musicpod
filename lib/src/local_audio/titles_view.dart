@@ -1,26 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../build_context_x.dart';
 import '../../common.dart';
+import '../../constants.dart';
 import '../../data.dart';
-import '../../local_audio.dart';
+import '../../library.dart';
 import '../../utils.dart';
-import '../l10n/l10n.dart';
+import 'album_page.dart';
+import 'artist_page.dart';
+import 'local_audio_model.dart';
 
 class TitlesView extends StatefulWidget {
   const TitlesView({
     super.key,
     required this.audios,
-    required this.showWindowControls,
-    this.onTextTap,
+    this.noResultMessage,
+    this.noResultIcon,
   });
 
   final Set<Audio>? audios;
-  final bool showWindowControls;
-  final void Function({
-    required String text,
-    required AudioType audioType,
-  })? onTextTap;
+  final Widget? noResultMessage, noResultIcon;
 
   @override
   State<TitlesView> createState() => _TitlesViewState();
@@ -58,31 +57,54 @@ class _TitlesViewState extends State<TitlesView> {
       );
     }
 
+    final model = context.read<LocalAudioModel>();
+    final libraryModel = context.read<LibraryModel>();
+
     return AudioPageBody(
+      padding: const EdgeInsets.only(top: 10),
       showTrack: false,
-      controlPanelButton: Expanded(
-        child: Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: Text(
-            '${context.l10n.localAudio}  •  ${widget.audios?.length} ${context.l10n.titles}',
-            style: getControlPanelStyle(context.t.textTheme),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ),
-      noResultMessage: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(context.l10n.noLocalTitlesFound),
-          const ShopRecommendations(),
-        ],
-      ),
+      showControlPanel: false,
+      noResultIcon: widget.noResultIcon,
+      noResultMessage: widget.noResultMessage,
       audios: _titles == null ? null : Set.from(_titles!),
       audioPageType: AudioPageType.immutable,
-      pageId: context.l10n.localAudio,
+      pageId: kLocalAudioPageId,
       showAudioPageHeader: false,
-      onTextTap: widget.onTextTap,
+      onAlbumTap: ({required audioType, required text}) {
+        final albumAudios = model.findAlbum(Audio(album: text));
+        if (albumAudios?.firstOrNull == null) return;
+        final id = generateAlbumId(albumAudios!.first);
+        if (id == null) return;
+
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) {
+              return AlbumPage(
+                isPinnedAlbum: libraryModel.isPinnedAlbum,
+                removePinnedAlbum: libraryModel.removePinnedAlbum,
+                addPinnedAlbum: libraryModel.addPinnedAlbum,
+                id: id,
+                album: albumAudios,
+              );
+            },
+          ),
+        );
+      },
+      onArtistTap: ({required audioType, required text}) {
+        final artistAudios = model.findArtist(Audio(artist: text));
+        final images = model.findImages(artistAudios ?? {});
+
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) {
+              return ArtistPage(
+                images: images,
+                artistAudios: artistAudios,
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

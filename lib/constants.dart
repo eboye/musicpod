@@ -37,6 +37,9 @@ const kAudioTileSpacing = EdgeInsets.only(right: 10.0);
 
 const kAudioTrackWidth = 40.0;
 
+const kFallbackThumbnail =
+    'https://raw.githubusercontent.com/ubuntu-flutter-community/musicpod/main/snap/gui/musicpod.png';
+
 const kGridPadding = EdgeInsets.only(
   top: 0,
   bottom: kYaruPagePadding,
@@ -62,6 +65,8 @@ const kCardHeight = 200.0;
 const kSmallCardHeight = kCardHeight - 70;
 
 const kCardBottomHeight = 30.0;
+
+const kMasterDetailBreakPoint = 720.0;
 
 const kImageGridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
   maxCrossAxisExtent: kSmallCardHeight + 40,
@@ -89,17 +94,20 @@ const kCardColorNeutral = Color.fromARGB(255, 133, 133, 133);
 
 const kAudioQueueThreshHold = 100;
 
+const kMainPageIconPadding = EdgeInsets.only(right: 4.0);
+
 const kLikedAudiosFileName = 'likedAudios.json';
-const kLikedAudios = 'likedAudios';
 const kTagFavsFileName = 'tagFavs.json';
+const kCountryFavsFileName = 'countryfavs.json';
 const kLastFav = 'lastFav';
 const kPlaylistsFileName = 'playlists.json';
 const kPinnedAlbumsFileName = 'pinnedAlbums.json';
 const kPodcastsFileName = 'podcasts.json';
 const kPodcastsUpdates = 'podcastsupdates.json';
-const kStarredStationsFileName = 'starredStations.json';
+const kStarredStationsFileName = 'betterStarredStations.json';
 const kSettingsFileName = 'settings.json';
 const kLastPositionsFileName = 'lastPositions.json';
+const kPlayerStateFileName = 'playerstate.json';
 const kLocalAudioCacheFileName = 'localaudiocache.json';
 const kDownloads = 'downloads.json';
 const kFeedsWithDownloads = 'feedswithdownloads.json';
@@ -117,6 +125,13 @@ const kAppIndex = 'appIndex';
 const kRadioIndex = 'radioIndex';
 const kPodcastIndex = 'podcastIndex';
 const kNeverShowImportFails = 'neverShowImportFails';
+const kLastCountryCode = 'lastCountryCode';
+const kSearchResult = 'searchResult';
+const kLocalAudioPageId = 'localAudio';
+const kPodcastsPageId = 'podcasts';
+const kRadioPageId = 'radio';
+const kNewPlaylistPageId = 'newPlaylist';
+const kLikedAudiosPageId = 'likedAudios';
 
 const shops = <String, String>{
   'https://us.7digital.com/': '7digital',
@@ -125,3 +140,5 @@ const shops = <String, String>{
   'https://www.amazon.com/music/player': 'Amazon Music',
   'https://bandcamp.com/tag/buy': 'Bandcamp',
 };
+
+const kSponsorLink = 'https://github.com/sponsors/Feichtmeier';

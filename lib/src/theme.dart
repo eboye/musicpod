@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:yaru/yaru.dart';
+import 'package:yaru_widgets/yaru_widgets.dart';
 
-import 'color_scheme_x.dart';
+import '../theme_data_x.dart';
 
 const darkDividerColor = Color.fromARGB(19, 255, 255, 255);
 
@@ -32,7 +34,12 @@ ThemeData m3Theme({
     colorScheme: colorScheme,
     splashFactory:
         Platform.isMacOS || Platform.isIOS ? NoSplash.splashFactory : null,
+    snackBarTheme: _createSnackBarThemeData(colorScheme),
   );
+}
+
+SnackBarThemeData _createSnackBarThemeData(ColorScheme scheme) {
+  return const SnackBarThemeData(behavior: SnackBarBehavior.floating);
 }
 
 Color? getSideBarColor(ThemeData theme) => theme.scaffoldBackgroundColor;
@@ -149,5 +156,107 @@ const alphabetColors = {
 
 Color getAlphabetColor(String text, [Color fallBackColor = Colors.black]) {
   final letter = text.isEmpty ? null : text[0];
-  return alphabetColors[letter] ?? fallBackColor;
+  return alphabetColors[letter?.toUpperCase()] ?? fallBackColor;
+}
+
+InputDecoration createMaterialDecoration({
+  required ColorScheme colorScheme,
+  TextStyle? style,
+  bool isDense = false,
+  bool filled = true,
+  OutlineInputBorder? border,
+  Color? fillColor,
+  EdgeInsets? contentPadding,
+}) {
+  final outlineInputBorder = border ??
+      OutlineInputBorder(
+        borderRadius: BorderRadius.circular(100),
+        borderSide: BorderSide(width: 2, color: colorScheme.primary),
+      );
+  return InputDecoration(
+    fillColor: fillColor,
+    filled: filled,
+    contentPadding: contentPadding ??
+        const EdgeInsets.only(top: 10, bottom: 10, left: 15, right: 15),
+    border: outlineInputBorder,
+    errorBorder: outlineInputBorder,
+    enabledBorder: outlineInputBorder,
+    focusedBorder: outlineInputBorder,
+    disabledBorder: outlineInputBorder,
+    focusedErrorBorder: outlineInputBorder,
+    helperStyle: style,
+    hintStyle: style,
+    labelStyle: style,
+    isDense: isDense,
+  );
+}
+
+InputDecoration createYaruDecoration({
+  required bool isLight,
+  TextStyle? style,
+  Color? fillColor,
+  EdgeInsets? contentPadding,
+}) {
+  final radius = BorderRadius.circular(100);
+
+  final fill = isLight ? const Color(0xffdcdcdc) : const Color(0xff2f2f2f);
+
+  final textStyle = style ??
+      const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.normal,
+      );
+
+  return InputDecoration(
+    filled: true,
+    fillColor: fillColor ?? fill,
+    hoverColor: (fillColor ?? fill).scale(lightness: 0.1),
+    suffixIconConstraints:
+        const BoxConstraints(maxWidth: kYaruTitleBarItemHeight),
+    border: OutlineInputBorder(
+      borderSide: BorderSide.none,
+      borderRadius: radius,
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderSide: BorderSide.none,
+      borderRadius: radius,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderSide: BorderSide.none,
+      borderRadius: radius,
+    ),
+    isDense: true,
+    contentPadding: contentPadding ??
+        const EdgeInsets.only(
+          bottom: 10,
+          top: 10,
+          right: 15,
+          left: 15,
+        ),
+    helperStyle: textStyle,
+    hintStyle: textStyle,
+    labelStyle: textStyle,
+  );
+}
+
+ButtonStyle createPopupStyle(ThemeData themeData) {
+  return TextButton.styleFrom(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(100),
+    ),
+  );
+}
+
+Color? chipColor(ThemeData theme) {
+  return yaruStyled
+      ? theme.colorScheme.outline.withOpacity(theme.isLight ? 1 : 0.4)
+      : null;
+}
+
+Color? chipBorder(ThemeData theme, bool loading) {
+  return yaruStyled ? (loading ? null : Colors.transparent) : null;
+}
+
+Color? chipSelectionColor(ThemeData theme, bool loading) {
+  return yaruStyled ? (loading ? theme.colorScheme.outline : null) : null;
 }

@@ -19,51 +19,37 @@ class LocalAudioModel extends SafeChangeNotifier {
   final LocalAudioService localAudioService;
   final LibraryService libraryService;
 
-  bool _searchActive = false;
-  bool get searchActive => _searchActive;
-  void setSearchActive(bool value) {
-    if (value == _searchActive) return;
-    _searchActive = value;
-    notifyListeners();
-  }
+  StreamSubscription<bool>? _directoryChangedSub;
+  StreamSubscription<bool>? _audiosChangedSub;
+  StreamSubscription<bool>? _localAudioCacheChangedSub;
+  StreamSubscription<bool>? _useLocalAudioCacheChangedSub;
 
-  String? _searchQuery;
-
-  String? get searchQuery => _searchQuery;
-  void setSearchQuery(String? value) {
-    if (value == null || value == _searchQuery) return;
-    _searchQuery = value;
-    notifyListeners();
-  }
-
-  Set<Audio>? _similarAlbumsSearchResult;
-  Set<Audio>? get similarAlbumsSearchResult => _similarAlbumsSearchResult;
-  void setSimilarAlbumsSearchResult(Set<Audio>? value) {
-    _similarAlbumsSearchResult = value;
-    notifyListeners();
-  }
+  Set<Audio>? _albumSearchResult;
+  Set<Audio>? get albumSearchResult => _albumSearchResult;
 
   Set<Audio>? _titlesSearchResult;
   Set<Audio>? get titlesSearchResult => _titlesSearchResult;
-  void setTitlesSearchResult(Set<Audio>? value) {
-    _titlesSearchResult = value;
-    notifyListeners();
-  }
 
-  Set<Audio>? _similarArtistsSearchResult;
-  Set<Audio>? get similarArtistsSearchResult => _similarArtistsSearchResult;
-  void setSimilarArtistsSearchResult(Set<Audio>? value) {
-    _similarArtistsSearchResult = value;
-    notifyListeners();
-  }
+  Set<Audio>? _artistsSearchResult;
+  Set<Audio>? get similarArtistsSearchResult => _artistsSearchResult;
 
-  void search() {
-    if (searchQuery == null) return;
+  String? _searchQuery;
+  String? get searchQuery => _searchQuery;
+  void search(String? query) {
+    _searchQuery = query;
+    if (query == null) return;
+    if (query.isEmpty) {
+      _titlesSearchResult = {};
+      _albumSearchResult = {};
+      _artistsSearchResult = {};
+      notifyListeners();
+      return;
+    }
 
     final allAlbumsFindings = audios?.where(
       (audio) =>
           audio.album?.isNotEmpty == true &&
-          audio.album!.toLowerCase().contains(searchQuery!.toLowerCase()),
+          audio.album!.toLowerCase().contains(query.toLowerCase()),
     );
 
     final albumsResult = <Audio>{};
@@ -78,7 +64,7 @@ class LocalAudioModel extends SafeChangeNotifier {
     final allArtistFindings = audios?.where(
       (audio) =>
           audio.artist?.isNotEmpty == true &&
-          audio.artist!.toLowerCase().contains(searchQuery!.toLowerCase()),
+          audio.artist!.toLowerCase().contains(query.toLowerCase()),
     );
     final artistsResult = <Audio>{};
     if (allArtistFindings != null) {
@@ -91,19 +77,17 @@ class LocalAudioModel extends SafeChangeNotifier {
       }
     }
 
-    var titles = audios?.where(
-          (audio) =>
-              audio.title?.isNotEmpty == true &&
-              audio.title!.toLowerCase().contains(searchQuery!.toLowerCase()),
-        ) ??
-        <Audio>{};
-    setTitlesSearchResult(
-      Set.from(
-        titles,
-      ),
+    _titlesSearchResult = Set.from(
+      audios?.where(
+            (audio) =>
+                audio.title?.isNotEmpty == true &&
+                audio.title!.toLowerCase().contains(query.toLowerCase()),
+          ) ??
+          <Audio>[],
     );
-    setSimilarAlbumsSearchResult(albumsResult);
-    setSimilarArtistsSearchResult(artistsResult);
+    _albumSearchResult = albumsResult;
+    _artistsSearchResult = artistsResult;
+    notifyListeners();
   }
 
   Set<Audio>? _allArtists;
@@ -204,28 +188,6 @@ class LocalAudioModel extends SafeChangeNotifier {
     return images;
   }
 
-  int _selectedTab = 0;
-  int get selectedTab => _selectedTab;
-  set selectedTab(int value) {
-    if (value == _selectedTab) return;
-    _selectedTab = value;
-    notifyListeners();
-  }
-
-  StreamSubscription<bool>? _directoryChangedSub;
-  StreamSubscription<bool>? _audiosChangedSub;
-  StreamSubscription<bool>? _localAudioCacheChangedSub;
-  StreamSubscription<bool>? _useLocalAudioCacheChangedSub;
-
-  @override
-  Future<void> dispose() async {
-    _directoryChangedSub?.cancel();
-    _audiosChangedSub?.cancel();
-    _localAudioCacheChangedSub?.cancel();
-    _useLocalAudioCacheChangedSub?.cancel();
-    super.dispose();
-  }
-
   Future<void> init({
     required void Function(List<String> failedImports) onFail,
     bool forceInit = false,
@@ -254,6 +216,15 @@ class LocalAudioModel extends SafeChangeNotifier {
         .listen((_) => notifyListeners());
 
     notifyListeners();
+  }
+
+  @override
+  Future<void> dispose() async {
+    _directoryChangedSub?.cancel();
+    _audiosChangedSub?.cancel();
+    _localAudioCacheChangedSub?.cancel();
+    _useLocalAudioCacheChangedSub?.cancel();
+    super.dispose();
   }
 
   Future<void> setUseLocalAudioCache(bool value) async =>

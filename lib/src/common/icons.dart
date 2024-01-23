@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:yaru_icons/yaru_icons.dart';
 import 'package:yaru_widgets/yaru_widgets.dart';
 
@@ -173,6 +174,21 @@ class Iconz {
       : appleStyled
           ? CupertinoIcons.shuffle
           : Icons.shuffle;
+  IconData get levelMiddle => yaruStyled
+      ? YaruIcons.meter_middle
+      : appleStyled
+          ? CupertinoIcons.speedometer
+          : Icons.speed;
+  IconData get levelHigh => yaruStyled
+      ? YaruIcons.meter_three_quarter
+      : appleStyled
+          ? CupertinoIcons.speedometer
+          : Icons.speed;
+  IconData get levelLow => yaruStyled
+      ? YaruIcons.meter_quarter
+      : appleStyled
+          ? CupertinoIcons.speedometer
+          : Icons.speed;
   IconData get skipBackward => yaruStyled
       ? YaruIcons.skip_backward
       : appleStyled
@@ -193,6 +209,21 @@ class Iconz {
       : appleStyled
           ? CupertinoIcons.forward
           : Icons.arrow_forward;
+  IconData get forward30 => yaruStyled
+      ? YaruIcons.redo
+      : appleStyled
+          ? CupertinoIcons.goforward_30
+          : Icons.forward_30;
+  IconData get backward10 => yaruStyled
+      ? YaruIcons.undo
+      : appleStyled
+          ? CupertinoIcons.gobackward_10
+          : Icons.replay_10;
+  IconData get goUp => yaruStyled
+      ? YaruIcons.go_up
+      : appleStyled
+          ? CupertinoIcons.up_arrow
+          : Icons.arrow_upward;
   IconData get share => yaruStyled
       ? YaruIcons.share
       : appleStyled
@@ -263,6 +294,11 @@ class Iconz {
       : appleStyled
           ? CupertinoIcons.ellipsis
           : Icons.more_horiz;
+  IconData? get close => yaruStyled
+      ? YaruIcons.window_close
+      : appleStyled
+          ? CupertinoIcons.clear
+          : Icons.clear;
 
   Widget getAnimatedStar(bool isStarred, [Color? color]) {
     if (yaruStyled) {
@@ -309,3 +345,17 @@ class Iconz {
 double get sideBarImageSize => 38;
 
 double get iconSize => yaruStyled ? kYaruIconSize : 24;
+
+IconData getIconForTag(String tag) {
+  final tagsToIcons = <String, IconData>{
+    'metal': TablerIcons.guitar_pick,
+    'pop': TablerIcons.diamond,
+  };
+
+  return tagsToIcons[tag] ??
+      (yaruStyled
+          ? YaruIcons.music_note
+          : appleStyled
+              ? CupertinoIcons.double_music_note
+              : Icons.music_note);
+}

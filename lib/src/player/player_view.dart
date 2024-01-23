@@ -4,24 +4,18 @@ import 'package:provider/provider.dart';
 import '../../app.dart';
 import '../../build_context_x.dart';
 import '../../constants.dart';
-import '../../data.dart';
 import '../../player.dart';
 import '../../theme_data_x.dart';
-import '../library/library_model.dart';
+import '../app/connectivity_notifier.dart';
 import '../theme.dart';
 
 class PlayerView extends StatefulWidget {
   const PlayerView({
     super.key,
     required this.playerViewMode,
-    required this.onTextTap,
-    required this.isOnline,
   });
 
   final PlayerViewMode playerViewMode;
-  final void Function({required String text, required AudioType audioType})
-      onTextTap;
-  final bool isOnline;
 
   @override
   State<PlayerView> createState() => _PlayerViewState();
@@ -55,29 +49,22 @@ class _PlayerViewState extends State<PlayerView> {
   @override
   Widget build(BuildContext context) {
     final theme = context.t;
-    final size = context.m.size;
-    final width = size.width;
+
+    // Connectivity
+    final isOnline = context.watch<ConnectivityNotifier>().isOnline;
 
     final playerModel = context.read<PlayerModel>();
+    final appModel = context.read<AppModel>();
     final nextAudio = context.select((PlayerModel m) => m.nextAudio);
     final c = context.select((PlayerModel m) => m.color);
     final color = getPlayerBg(
       c,
-      theme.isLight ? kCardColorLight : theme.scaffoldBackgroundColor,
+      theme.isLight ? kCardColorLight : kCardColorDark,
     );
-    final setFullScreen = playerModel.setFullScreen;
+    final setFullScreen = appModel.setFullScreen;
     final playPrevious = playerModel.playPrevious;
     final playNext = playerModel.playNext;
     final audio = context.select((PlayerModel m) => m.audio);
-
-    final library = context.read<LibraryModel>();
-    final liked = library.liked(audio);
-
-    final removeLikedAudio = library.removeLikedAudio;
-    final addLikedAudio = library.addLikedAudio;
-    final addStarredStation = library.addStarredStation;
-    final removeStarredStation = library.unStarStation;
-    final isStarredStation = library.isStarredStation(audio?.title);
 
     final isVideo = context.select((PlayerModel m) => m.isVideo);
 
@@ -87,21 +74,12 @@ class _PlayerViewState extends State<PlayerView> {
         isVideo: isVideo == true,
         videoController: playerModel.controller,
         playerViewMode: widget.playerViewMode,
-        onTextTap: widget.onTextTap,
         setFullScreen: setFullScreen,
         nextAudio: nextAudio,
         audio: audio,
-        color: color,
         playPrevious: playPrevious,
         playNext: playNext,
-        liked: liked,
-        isStarredStation: isStarredStation,
-        addStarredStation: addStarredStation,
-        removeStarredStation: removeStarredStation,
-        addLikedAudio: addLikedAudio,
-        removeLikedAudio: removeLikedAudio,
-        isOnline: widget.isOnline,
-        size: size,
+        isOnline: isOnline,
       );
     } else {
       player = Column(
@@ -111,20 +89,11 @@ class _PlayerViewState extends State<PlayerView> {
           BottomPlayer(
             isVideo: isVideo,
             videoController: playerModel.controller,
-            onTextTap: widget.onTextTap,
             setFullScreen: setFullScreen,
             audio: audio,
-            width: width,
-            color: color,
             playPrevious: playPrevious,
             playNext: playNext,
-            liked: liked,
-            isStarredStation: isStarredStation,
-            addStarredStation: addStarredStation,
-            removeStarredStation: removeStarredStation,
-            addLikedAudio: addLikedAudio,
-            removeLikedAudio: removeLikedAudio,
-            isOnline: widget.isOnline,
+            isOnline: isOnline,
           ),
         ],
       );

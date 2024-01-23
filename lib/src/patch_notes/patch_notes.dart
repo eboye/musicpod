@@ -39,8 +39,46 @@ const kPatchNotes20231102 = 'Hello MusicPod Users :)\n\n'
     '\n* save your favorite tags (genres) with the star button'
     '\n* your last tag selection is now saved';
 
-const kRecentPatchNotesDisposed = kPatchNotes20231102disposed;
-const kRecentPatchNotesTitle = kPatchNotesTitle20231102;
-const kRecentPatchNotes = kPatchNotes20231102;
+// 2023 12 31
+const kPatchNotes20231231disposed = 'patchNotes20231231disposed';
+const kPatchNotesTitle20231231 = 'Patch notes: 2023-12-31';
+const kPatchNotes20231231 = 'Hello MusicPod Users 💙🐧🧡\n\n'
+    'A lot of improvements happened in the edge channel and are now live on latest/stable:'
+    '\n* playlist creation has been improved'
+    '\n* playlist presentation has been modernized'
+    '\n* sidebar elements are now bigger'
+    '\n  and allow immediate playing when hovered or selected'
+    '\n* the queue button now leads you to a overhauled queue dialogue'
+    '\n  where you can move songs around or create a new playlist out of the queue'
+    '\n* the radio connections should now be more robust'
+    '\n\nIf you like MusicPod please consider sponsoring me 🙏:'
+    '\n';
+
+// 2024 01 10
+const kPatchNotes20240110disposed = 'patchNotes20240110disposed';
+const kPatchNotesTitle20240110 = 'Patch notes: 2024-01-10';
+const kPatchNotes20240110 = 'Hello MusicPod Users 💙🐧🧡\n\n'
+    'New updates in both channels:'
+    '\n* playlist creation has been further improved'
+    '\n* jump to lists directly from the snackbar'
+    '\n* the player background is now created by a blurred version of the image'
+    '\n* if the queue is not too big, it is preserved after quitting MusicPod'
+    '\n\nIf you like MusicPod please consider sponsoring me 🙏:'
+    '\n';
+
+// 2024 01 15
+const kPatchNotes20240115disposed = 'patchNotes20240115disposed';
+const kPatchNotesTitle20240115 = 'Patch notes: 2024-01-15';
+const kPatchNotes20240115 = 'Hello MusicPod Users 💙🐧🧡\n\n'
+    'Important bug fixes:'
+    '\n* removing radio stations, albums and podcasts in small windows now works'
+    '\n* stations are now properly identified. Sadly this means you need to add'
+    '\n  your favorite radio stations again :('
+    '\n\nIf you like MusicPod please consider sponsoring me 🙏:'
+    '\n';
+
+const kRecentPatchNotesDisposed = kPatchNotes20240115disposed;
+const kRecentPatchNotesTitle = kPatchNotesTitle20240115;
+const kRecentPatchNotes = kPatchNotes20240115;
 
 const kPatchNotesDisposed = 'kPatchNotesDisposed';

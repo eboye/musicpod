@@ -7,30 +7,28 @@ import '../../build_context_x.dart';
 import '../../common.dart';
 import '../../constants.dart';
 import '../../data.dart';
+import '../../globals.dart';
+import '../../library.dart';
+import '../../player.dart';
 import '../../theme.dart';
 import '../../theme_data_x.dart';
-import 'radio_page.dart';
+import 'radio_fall_back_icon.dart';
+import 'radio_search.dart';
+import 'radio_search_page.dart';
 
 class StationPage extends StatelessWidget {
   const StationPage({
     super.key,
     required this.station,
-    required this.play,
     required this.name,
     required this.unStarStation,
     required this.starStation,
-    this.onTextTap,
-    required this.isStarred,
   });
 
   final Audio station;
   final String name;
-  final Future<void> Function({Duration? newPosition, Audio? newAudio}) play;
   final void Function(String station) unStarStation;
   final void Function(String station) starStation;
-  final bool isStarred;
-
-  final void Function(String text)? onTextTap;
 
   static Widget createIcon({
     required BuildContext context,
@@ -46,6 +44,13 @@ class StationPage extends StatelessWidget {
             Iconz().star,
             size: sideBarImageSize,
           );
+
+    if (imageUrl == null) {
+      return SideBarFallBackImage(
+        child: selected ? Icon(Iconz().starFilled) : Icon(Iconz().star),
+      );
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(5),
       child: Container(
@@ -75,6 +80,12 @@ class StationPage extends StatelessWidget {
 
     final showWindowControls =
         context.select((AppModel a) => a.showWindowControls);
+    final startPlaylist = context.read<PlayerModel>().startPlaylist;
+    final libraryModel = context.read<LibraryModel>();
+    final isStarred = station.url == null
+        ? false
+        : libraryModel.isStarredStation(station.url!);
+    context.select((LibraryModel m) => m.starredStations.length);
 
     return YaruDetailPage(
       appBar: HeaderBar(
@@ -116,9 +127,11 @@ class StationPage extends StatelessWidget {
                           ),
                         ),
                         IconButton(
-                          onPressed: isStarred
-                              ? () => unStarStation(name)
-                              : () => starStation(name),
+                          onPressed: station.url == null
+                              ? null
+                              : isStarred
+                                  ? () => unStarStation(station.url!)
+                                  : () => starStation(station.url!),
                           icon: Iconz().getAnimatedStar(
                             isStarred,
                           ),
@@ -130,8 +143,14 @@ class StationPage extends StatelessWidget {
                     color: theme.isLight ? theme.dividerColor : kCardColorDark,
                     height: size,
                     width: size,
-                    onTap: () => play(newAudio: station),
-                    onPlay: () => play(newAudio: station),
+                    onTap: () => startPlaylist(
+                      listName: station.toShortPath(),
+                      audios: {station},
+                    ),
+                    onPlay: () => startPlaylist(
+                      listName: station.toShortPath(),
+                      audios: {station},
+                    ),
                     image: SizedBox(
                       height: size,
                       width: size,
@@ -147,39 +166,51 @@ class StationPage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      top: 15,
-                      left: 5,
-                      right: 5,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        top: 15,
+                        left: 5,
+                        right: 5,
+                      ),
+                      child: (tags?.isNotEmpty == true)
+                          ? YaruChoiceChipBar(
+                              goNextIcon: Padding(
+                                padding: appleStyled
+                                    ? const EdgeInsets.only(left: 3)
+                                    : EdgeInsets.zero,
+                                child: Icon(Iconz().goNext),
+                              ),
+                              goPreviousIcon: Padding(
+                                padding: appleStyled
+                                    ? const EdgeInsets.only(right: 3)
+                                    : EdgeInsets.zero,
+                                child: Icon(Iconz().goBack),
+                              ),
+                              chipHeight: chipHeight,
+                              yaruChoiceChipBarStyle: tags!.length < 3
+                                  ? YaruChoiceChipBarStyle.wrap
+                                  : YaruChoiceChipBarStyle.stack,
+                              labels: tags.map((e) => Text(e)).toList(),
+                              isSelected: tags.map((e) => false).toList(),
+                              onSelected: (index) {
+                                navigatorKey.currentState?.push(
+                                  MaterialPageRoute(
+                                    builder: (context) {
+                                      return RadioSearchPage(
+                                        radioSearch: RadioSearch.tag,
+                                        searchQuery: tags[index],
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            )
+                          : SizedBox(
+                              height: chipHeight,
+                            ),
                     ),
-                    child: (tags?.isNotEmpty == true)
-                        ? YaruChoiceChipBar(
-                            goNextIcon: Padding(
-                              padding: appleStyled
-                                  ? const EdgeInsets.only(left: 3)
-                                  : EdgeInsets.zero,
-                              child: Icon(Iconz().goNext),
-                            ),
-                            goPreviousIcon: Padding(
-                              padding: appleStyled
-                                  ? const EdgeInsets.only(right: 3)
-                                  : EdgeInsets.zero,
-                              child: Icon(Iconz().goBack),
-                            ),
-                            chipHeight: chipHeight,
-                            yaruChoiceChipBarStyle:
-                                YaruChoiceChipBarStyle.stack,
-                            labels: tags!.map((e) => Text(e)).toList(),
-                            isSelected: tags.map((e) => false).toList(),
-                            onSelected: (index) {
-                              onTextTap?.call(tags[index]);
-                              Navigator.of(context).maybePop();
-                            },
-                          )
-                        : SizedBox(
-                            height: chipHeight,
-                          ),
                   ),
                 ],
               ),

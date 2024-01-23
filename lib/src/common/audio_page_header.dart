@@ -4,8 +4,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:yaru_widgets/yaru_widgets.dart';
 
 import '../../build_context_x.dart';
-import '../../common.dart';
-import '../../constants.dart';
 import '../../theme.dart';
 import '../l10n/l10n.dart';
 
@@ -17,6 +15,7 @@ class AudioPageHeader extends StatelessWidget {
     this.image,
     this.label,
     this.subTitle,
+    this.height,
   });
 
   final String title;
@@ -24,6 +23,7 @@ class AudioPageHeader extends StatelessWidget {
   final Widget? image;
   final String? label;
   final String? subTitle;
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
@@ -31,11 +31,9 @@ class AudioPageHeader extends StatelessWidget {
     final size = context.m.size;
     final smallWindow = size.width < 600.0;
 
-    return Container(
-      height: kAudioPageHeaderHeight,
-      decoration: BoxDecoration(
-        gradient: getAudioPageHeaderGradient(theme),
-      ),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      height: height,
       padding: const EdgeInsets.all(20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,71 +52,87 @@ class AudioPageHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Text(
-                    label ?? context.l10n.album,
-                    style: theme.textTheme.labelSmall,
-                  ),
-                  Text(
-                    title,
-                    style: theme.textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.w300,
-                      fontSize: 35,
-                      color: theme.colorScheme.onSurface.withOpacity(0.9),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(
-                    height: 5,
-                  ),
-                  if (subTitle?.isNotEmpty == true)
-                    Text(
-                      subTitle!,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  Expanded(
-                    child: description == null
-                        ? const SizedBox.expand()
-                        : SizedBox(
-                            width: 600,
-                            child: InkWell(
-                              borderRadius:
-                                  BorderRadius.circular(kYaruButtonRadius),
-                              onTap: () => showDialog(
-                                context: context,
-                                builder: (context) => _DescriptionDialog(
-                                  title: title,
-                                  description: description!,
-                                ),
-                              ),
-                              child: Html(
-                                data: description,
-                                onAnchorTap: (url, attributes, element) {
-                                  if (url == null) return;
-                                  launchUrl(Uri.parse(url));
-                                },
-                                style: {
-                                  'img': Style(display: Display.none),
-                                  'html': Style(
-                                    margin: Margins.zero,
-                                    padding: HtmlPaddings.zero,
-                                    textAlign: TextAlign.start,
-                                  ),
-                                  'body': Style(
-                                    margin: Margins.zero,
-                                    padding: HtmlPaddings.only(top: 5),
-                                    textOverflow: TextOverflow.ellipsis,
-                                    maxLines: 4,
-                                    textAlign: TextAlign.start,
-                                  ),
-                                },
-                              ),
+                  if (height != 0)
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              label ?? context.l10n.album,
+                              style: theme.textTheme.labelSmall,
+                              maxLines: 1,
                             ),
                           ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 5),
+                            child: Text('·'),
+                          ),
+                          Flexible(
+                            child: Text(
+                              subTitle ?? '',
+                              style: theme.textTheme.labelSmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.visible,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Flexible(
+                    fit: FlexFit.tight,
+                    child: Text(
+                      title,
+                      style: theme.textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.w300,
+                        fontSize: 30,
+                        color: theme.colorScheme.onSurface.withOpacity(0.9),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  if (description != null)
+                    Expanded(
+                      flex: 3,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(kYaruButtonRadius),
+                        onTap: () => showDialog(
+                          context: context,
+                          builder: (context) => _DescriptionDialog(
+                            title: title,
+                            description: description!,
+                          ),
+                        ),
+                        child: SizedBox(
+                          height: 100,
+                          child: Html(
+                            data: description,
+                            onAnchorTap: (url, attributes, element) {
+                              if (url == null) return;
+                              launchUrl(Uri.parse(url));
+                            },
+                            style: {
+                              'img': Style(display: Display.none),
+                              'html': Style(
+                                margin: Margins.zero,
+                                padding: HtmlPaddings.zero,
+                                textAlign: TextAlign.start,
+                                maxLines: 20,
+                                textOverflow: TextOverflow.fade,
+                              ),
+                              'body': Style(
+                                margin: Margins.zero,
+                                textOverflow: TextOverflow.fade,
+                                maxLines: 20,
+                                textAlign: TextAlign.start,
+                              ),
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -139,49 +153,43 @@ class _DescriptionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.t;
-    return SizedBox(
-      height: 400,
-      width: 400,
-      child: AlertDialog(
-        title: yaruStyled
-            ? YaruDialogTitleBar(
-                title: Text(title),
-                backgroundColor: Colors.transparent,
-                border: BorderSide.none,
-              )
-            : Text(title),
-        titlePadding: yaruStyled ? EdgeInsets.zero : null,
-        contentPadding: const EdgeInsets.only(
-          top: 10,
-          left: kYaruPagePadding,
-          right: kYaruPagePadding,
-          bottom: kYaruPagePadding,
-        ),
-        content: SizedBox(
-          width: 400,
-          height: 200,
-          child: Html(
-            onAnchorTap: (url, attributes, element) {
-              if (url == null) return;
-              launchUrl(Uri.parse(url));
-            },
-            data: description,
-            style: {
-              'html': Style(
-                margin: Margins.zero,
-                padding: HtmlPaddings.zero,
-              ),
-              'body': Style(
-                margin: Margins.zero,
-                padding: HtmlPaddings.zero,
-                color: theme.hintColor,
-              ),
-            },
-          ),
-        ),
-        scrollable: true,
+    return AlertDialog(
+      title: yaruStyled
+          ? YaruDialogTitleBar(
+              title: Text(title),
+              backgroundColor: Colors.transparent,
+              border: BorderSide.none,
+            )
+          : Text(title),
+      titlePadding: yaruStyled ? EdgeInsets.zero : null,
+      contentPadding: const EdgeInsets.only(
+        top: 10,
+        left: kYaruPagePadding,
+        right: kYaruPagePadding,
+        bottom: kYaruPagePadding,
       ),
+      content: SizedBox(
+        width: 400,
+        height: 500,
+        child: Html(
+          onAnchorTap: (url, attributes, element) {
+            if (url == null) return;
+            launchUrl(Uri.parse(url));
+          },
+          data: description,
+          style: {
+            'html': Style(
+              margin: Margins.zero,
+              padding: HtmlPaddings.zero,
+            ),
+            'body': Style(
+              margin: Margins.zero,
+              padding: HtmlPaddings.zero,
+            ),
+          },
+        ),
+      ),
+      scrollable: true,
     );
   }
 }

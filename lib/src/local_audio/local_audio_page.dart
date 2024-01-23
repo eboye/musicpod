@@ -7,11 +7,15 @@ import '../../build_context_x.dart';
 import '../../common.dart';
 import '../../constants.dart';
 import '../../data.dart';
+import '../../globals.dart';
 import '../../local_audio.dart';
 import '../../player.dart';
 import '../l10n/l10n.dart';
 import '../library/library_model.dart';
 import 'cache_dialog.dart';
+import 'local_audio_body.dart';
+import 'local_audio_control_panel.dart';
+import 'local_audio_view.dart';
 
 class LocalAudioPage extends StatefulWidget {
   const LocalAudioPage({
@@ -22,8 +26,7 @@ class LocalAudioPage extends StatefulWidget {
   State<LocalAudioPage> createState() => _LocalAudioPageState();
 }
 
-class _LocalAudioPageState extends State<LocalAudioPage>
-    with SingleTickerProviderStateMixin {
+class _LocalAudioPageState extends State<LocalAudioPage> {
   @override
   void initState() {
     super.initState();
@@ -65,184 +68,72 @@ class _LocalAudioPageState extends State<LocalAudioPage>
 
   @override
   Widget build(BuildContext context) {
-    final searchQuery = context.select((LocalAudioModel m) => m.searchQuery);
-    final searchActive = context.select((LocalAudioModel m) => m.searchActive);
-
-    final model = context.read<LocalAudioModel>();
-    final audios = context.select((LocalAudioModel m) => m.audios);
-    final artists = model.allArtists;
-    final albums = model.allAlbums;
-    final setSearchQuery = model.setSearchQuery;
-    final search = model.search;
-    final setSearchActive = model.setSearchActive;
-    final findArtist = model.findArtist;
-    final findImages = model.findImages;
-    final findAlbum = model.findAlbum;
-
-    final similarArtistsSearchResult =
-        context.select((LocalAudioModel m) => m.similarArtistsSearchResult);
-
-    final similarAlbumsSearchResult =
-        context.select((LocalAudioModel m) => m.similarAlbumsSearchResult);
-
-    final libraryModel = context.read<LibraryModel>();
-    final selectedIndex = context.select((LibraryModel m) => m.localAudioindex);
-    final onIndexSelected = libraryModel.setLocalAudioindex;
-
-    context.select((LocalAudioModel m) => m.useLocalAudioCache);
-
-    final isPinnedAlbum = libraryModel.isPinnedAlbum;
-    final removePinnedAlbum = libraryModel.removePinnedAlbum;
-    final addPinnedAlbum = libraryModel.addPinnedAlbum;
-
-    final playerModel = context.read<PlayerModel>();
-    final startPlaylist = playerModel.startPlaylist;
-
-    final isPlaying = context.select((PlayerModel m) => m.isPlaying);
-    final currentAudio = context.select((PlayerModel m) => m.audio);
-    final play = playerModel.play;
-    final pause = playerModel.pause;
-    final resume = playerModel.resume;
-
-    final Set<Audio>? titlesResult =
-        context.select((LocalAudioModel m) => m.titlesSearchResult);
-
     final showWindowControls =
         context.select((AppModel a) => a.showWindowControls);
 
-    void onTap(text) {
-      setSearchQuery(text);
-      search();
-      setSearchActive(true);
+    final model = context.read<LocalAudioModel>();
+    final audios = context.select((LocalAudioModel m) => m.audios);
+
+    void search({
+      required String? text,
+    }) {
+      if (text != null) {
+        model.search(text);
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) {
+              return const LocalAudioSearchPage();
+            },
+          ),
+        );
+      } else {
+        navigatorKey.currentState?.maybePop();
+      }
     }
 
-    final tabBar = SizedBox(
-      width: kSearchBarWidth,
-      child: TabsBar(
-        onTap: (value) {
-          onIndexSelected.call(value);
-          setSearchActive(false);
-          setSearchQuery(null);
-        },
-        tabs: [
-          Tab(
-            text: context.l10n.titles,
-          ),
-          Tab(
-            text: context.l10n.artists,
-          ),
-          Tab(
-            text: context.l10n.albums,
-          ),
-        ],
-      ),
-    );
+    final index = context.select((LibraryModel m) => m.localAudioindex) ?? 0;
+    final localAudioView = LocalAudioView.values[index];
 
-    final tabBarView = TabBarView(
-      children: [
-        TitlesView(
-          onTextTap: ({required audioType, required text}) => onTap(text),
-          audios: audios,
-          showWindowControls: showWindowControls,
-        ),
-        ArtistsView(
-          showWindowControls: showWindowControls,
-          artists: artists,
-          onTextTap: ({required audioType, required text}) => onTap(text),
-          findArtist: findArtist,
-          findImages: findImages,
-        ),
-        AlbumsView(
-          showWindowControls: showWindowControls,
-          albums: albums,
-          onTextTap: ({required audioType, required text}) => onTap(text),
-          addPinnedAlbum: addPinnedAlbum,
-          findAlbum: findAlbum,
-          isPinnedAlbum: isPinnedAlbum,
-          removePinnedAlbum: removePinnedAlbum,
-          startPlaylist: startPlaylist,
+    context.select((LocalAudioModel m) => m.useLocalAudioCache);
+
+    final headerBar = HeaderBar(
+      style: showWindowControls
+          ? YaruTitleBarStyle.normal
+          : YaruTitleBarStyle.undecorated,
+      leading: (navigatorKey.currentState?.canPop() == true)
+          ? NavBackButton(
+              onPressed: () => search(text: null),
+            )
+          : const SizedBox.shrink(),
+      titleSpacing: 0,
+      actions: [
+        Flexible(
+          child: Padding(
+            padding: appBarActionSpacing,
+            child: SearchButton(
+              active: false,
+              onPressed: () => search(text: ''),
+            ),
+          ),
         ),
       ],
+      title: Text(context.l10n.localAudio),
     );
 
-    Widget body;
-    if (searchQuery?.isNotEmpty == true && searchActive) {
-      body = LocalAudioSearchPage(
-        similarAlbumsSearchResult: similarAlbumsSearchResult,
-        showWindowControls: showWindowControls,
-        searchQuery: searchQuery,
-        setSearchActive: setSearchActive,
-        search: search,
-        setSearchQuery: setSearchQuery,
-        currentAudio: currentAudio,
-        titlesResult: titlesResult,
-        similarArtistsSearchResult: similarArtistsSearchResult,
-        addPinnedAlbum: addPinnedAlbum,
-        findAlbum: findAlbum,
-        findArtist: findArtist,
-        findImages: findImages,
-        isPinnedAlbum: isPinnedAlbum,
-        isPlaying: isPlaying,
-        pause: pause,
-        play: play,
-        resume: resume,
-        removePinnedAlbum: removePinnedAlbum,
-        startPlaylist: startPlaylist,
-      );
-    } else {
-      body = tabBarView;
-    }
-
-    return DefaultTabController(
-      initialIndex: selectedIndex ?? 0,
-      length: 3,
-      child: Scaffold(
-        appBar: HeaderBar(
-          style: showWindowControls
-              ? YaruTitleBarStyle.normal
-              : YaruTitleBarStyle.undecorated,
-          leading: (Navigator.of(context).canPop())
-              ? NavBackButton(
-                  onPressed: () {
-                    setSearchActive(false);
-                  },
-                )
-              : const SizedBox.shrink(),
-          titleSpacing: 0,
-          actions: [
-            Flexible(
-              child: Padding(
-                padding: appBarActionSpacing,
-                child: SearchButton(
-                  active: searchActive,
-                  onPressed: () {
-                    setSearchActive(!searchActive);
-                    setSearchQuery('');
-                  },
-                ),
-              ),
+    return Scaffold(
+      appBar: headerBar,
+      body: Column(
+        children: [
+          const LocalAudioControlPanel(),
+          Expanded(
+            child: LocalAudioBody(
+              localAudioView: localAudioView,
+              titles: audios,
+              albums: model.allAlbums,
+              artists: model.allArtists,
             ),
-          ],
-          title: searchActive
-              ? SizedBox(
-                  width: kSearchBarWidth,
-                  child: SearchingBar(
-                    key: ValueKey(searchQuery),
-                    text: searchQuery,
-                    onSubmitted: (value) {
-                      setSearchActive(true);
-                      setSearchQuery(value);
-                      search();
-                    },
-                    onClear: () {
-                      setSearchActive(false);
-                      setSearchQuery('');
-                    },
-                  ),
-                )
-              : tabBar,
-        ),
-        body: body,
+          ),
+        ],
       ),
     );
   }
@@ -267,6 +158,11 @@ class LocalAudioPageIcon extends StatelessWidget {
         color: theme.colorScheme.primary,
       );
     }
-    return selected ? Icon(Iconz().localAudioFilled) : Icon(Iconz().localAudio);
+
+    return Padding(
+      padding: kMainPageIconPadding,
+      child:
+          selected ? Icon(Iconz().localAudioFilled) : Icon(Iconz().localAudio),
+    );
   }
 }

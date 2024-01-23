@@ -14,10 +14,10 @@ class AudioTile extends StatelessWidget {
     this.onLike,
     this.likeIcon,
     required this.isPlayerPlaying,
-    required this.play,
     required this.pause,
     required this.resume,
-    this.onTextTap,
+    this.onAlbumTap,
+    this.onArtistTap,
     this.showTrack = true,
     this.showAlbum = true,
     this.showArtist = true,
@@ -25,14 +25,15 @@ class AudioTile extends StatelessWidget {
     this.artistFlex = 1,
     this.albumFlex = 1,
     this.startPlaylist,
+    this.trackLabel,
   });
 
+  final String? trackLabel;
   final Audio audio;
   final bool selected;
   final void Function()? onLike;
   final Widget? likeIcon;
   final bool isPlayerPlaying;
-  final Future<void> Function({Duration? newPosition, Audio? newAudio}) play;
   final Future<void> Function() resume;
   final void Function()? startPlaylist;
   final void Function() pause;
@@ -42,19 +43,21 @@ class AudioTile extends StatelessWidget {
   final void Function({
     required String text,
     required AudioType audioType,
-  })? onTextTap;
+  })? onAlbumTap;
+  final void Function({
+    required String text,
+    required AudioType audioType,
+  })? onArtistTap;
 
   final int titleFlex, artistFlex, albumFlex;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.t;
-    final textStyle = TextStyle(
-      color: selected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-      fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-    );
-
     final listTile = ListTile(
+      selected: selected && isPlayerPlaying,
+      selectedColor: theme.colorScheme.onSurface,
+      selectedTileColor: theme.colorScheme.onSurface.withOpacity(0.05),
       contentPadding: kAudioTilePadding,
       onTap: () {
         if (selected) {
@@ -64,11 +67,7 @@ class AudioTile extends StatelessWidget {
             resume();
           }
         } else {
-          if (startPlaylist != null) {
-            startPlaylist!();
-          } else {
-            play(newAudio: audio);
-          }
+          startPlaylist!();
         }
       },
       title: Row(
@@ -78,10 +77,10 @@ class AudioTile extends StatelessWidget {
             Padding(
               padding: kAudioTileTrackPadding,
               child: Text(
-                audio.trackNumber != null
-                    ? audio.trackNumber!.toString().padLeft(2, '0')
-                    : '00',
-                style: textStyle,
+                trackLabel ??
+                    (audio.trackNumber != null
+                        ? audio.trackNumber!.toString().padLeft(2, '0')
+                        : '00'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -92,7 +91,6 @@ class AudioTile extends StatelessWidget {
               padding: kAudioTileSpacing,
               child: Text(
                 audio.title ?? context.l10n.unknown,
-                style: textStyle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -104,16 +102,15 @@ class AudioTile extends StatelessWidget {
               child: Padding(
                 padding: kAudioTileSpacing,
                 child: TapAbleText(
-                  onTap: onTextTap == null || audio.audioType == null
+                  onTap: onArtistTap == null || audio.audioType == null
                       ? null
-                      : () => onTextTap!(
+                      : () => onArtistTap!(
                             text: audio.artist!,
                             audioType: audio.audioType!,
                           ),
                   text: audio.artist?.isNotEmpty == false
                       ? context.l10n.unknown
                       : audio.artist!,
-                  selected: selected,
                 ),
               ),
             ),
@@ -121,18 +118,17 @@ class AudioTile extends StatelessWidget {
             Expanded(
               flex: albumFlex,
               child: TapAbleText(
-                onTap: onTextTap == null ||
+                onTap: onAlbumTap == null ||
                         audio.audioType == null ||
                         audio.audioType == AudioType.radio
                     ? null
-                    : () => onTextTap!(
+                    : () => onAlbumTap!(
                           text: audio.album!,
                           audioType: audio.audioType!,
                         ),
                 text: audio.album?.isNotEmpty == false
                     ? context.l10n.unknown
                     : audio.album!,
-                selected: selected,
               ),
             ),
         ],

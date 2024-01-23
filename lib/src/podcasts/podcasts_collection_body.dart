@@ -1,32 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:yaru_widgets/yaru_widgets.dart';
 
 import '../../build_context_x.dart';
 import '../../common.dart';
 import '../../constants.dart';
 import '../../data.dart';
-import '../../podcasts.dart';
-import '../common/loading_grid.dart';
-import '../globals.dart';
 import '../../l10n.dart';
+import '../../player.dart';
+import '../../podcasts.dart';
+import '../../theme.dart';
+import '../globals.dart';
 import '../library/library_model.dart';
 
 class PodcastsCollectionBody extends StatelessWidget {
   const PodcastsCollectionBody({
     super.key,
     required this.isOnline,
-    required this.startPlaylist,
-    required this.onTapText,
-    required this.addPodcast,
-    required this.removePodcast,
     required this.loading,
   });
 
   final bool isOnline;
-  final Future<void> Function(Set<Audio>, String) startPlaylist;
-  final void Function(String text) onTapText;
-  final void Function(String, Set<Audio>) addPodcast;
-  final void Function(String) removePodcast;
   final bool loading;
 
   @override
@@ -34,6 +28,7 @@ class PodcastsCollectionBody extends StatelessWidget {
     final theme = context.t;
     final subs = context.select((LibraryModel m) => m.podcasts);
     context.select((LibraryModel m) => m.podcastUpdatesLength);
+    final playerModel = context.read<PlayerModel>();
     final libraryModel = context.read<LibraryModel>();
     final podcastUpdateAvailable = libraryModel.podcastUpdateAvailable;
     final feedHasDownload = libraryModel.feedHasDownload;
@@ -66,25 +61,45 @@ class PodcastsCollectionBody extends StatelessWidget {
                   const SizedBox(
                     width: 25,
                   ),
-                  ChoiceChip(
-                    selected: updatesOnly,
+                  YaruChoiceChipBar(
+                    chipBackgroundColor: chipColor(theme),
+                    selectedChipBackgroundColor:
+                        chipSelectionColor(theme, loading),
+                    borderColor: chipBorder(theme, loading),
+                    yaruChoiceChipBarStyle: YaruChoiceChipBarStyle.wrap,
+                    clearOnSelect: false,
+                    selectedFirst: false,
+                    labels: [
+                      Text(context.l10n.newEpisodes),
+                      Text(
+                        context.l10n.downloadsOnly,
+                      ),
+                    ],
+                    isSelected: [
+                      updatesOnly,
+                      downloadsOnly,
+                    ],
                     onSelected: loading
                         ? null
-                        : (v) {
-                            if (v) {
-                              model.update(context.l10n.newEpisodeAvailable);
+                        : (index) {
+                            if (index == 0) {
+                              if (updatesOnly) {
+                                setUpdatesOnly(false);
+                              } else {
+                                model.update(context.l10n.newEpisodeAvailable);
+
+                                setUpdatesOnly(true);
+                                setDownloadsOnly(false);
+                              }
+                            } else {
+                              if (downloadsOnly) {
+                                setDownloadsOnly(false);
+                              } else {
+                                setDownloadsOnly(true);
+                                setUpdatesOnly(false);
+                              }
                             }
-                            setUpdatesOnly(v);
                           },
-                    label: Text(context.l10n.newEpisodes),
-                  ),
-                  const SizedBox(
-                    width: 10,
-                  ),
-                  ChoiceChip(
-                    selected: downloadsOnly,
-                    onSelected: setDownloadsOnly,
-                    label: Text(context.l10n.downloadsOnly),
                   ),
                 ],
               ),
@@ -145,10 +160,12 @@ class PodcastsCollectionBody extends StatelessWidget {
                                 noConfirm: podcast.value.length <
                                     kAudioQueueThreshHold,
                                 message: podcast.value.length.toString(),
-                                run: () => startPlaylist(
-                                  podcast.value,
-                                  podcast.key,
-                                ).then((_) => removeUpdate(podcast.key)),
+                                run: () => playerModel
+                                    .startPlaylist(
+                                      audios: podcast.value,
+                                      listName: podcast.key,
+                                    )
+                                    .then((_) => removeUpdate(podcast.key)),
                               );
                             },
                             onTap: () => navigatorKey.currentState?.push(
@@ -163,13 +180,8 @@ class PodcastsCollectionBody extends StatelessWidget {
                                         podcast.value.firstOrNull?.title ??
                                         podcast.value.firstOrNull.toString(),
                                     audios: podcast.value,
-                                    onTextTap: ({
-                                      required audioType,
-                                      required text,
-                                    }) =>
-                                        onTapText(text),
-                                    addPodcast: addPodcast,
-                                    removePodcast: removePodcast,
+                                    addPodcast: libraryModel.addPodcast,
+                                    removePodcast: libraryModel.removePodcast,
                                     imageUrl: podcast
                                             .value.firstOrNull?.albumArtUrl ??
                                         podcast.value.firstOrNull?.imageUrl,

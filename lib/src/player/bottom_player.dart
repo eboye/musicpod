@@ -4,7 +4,9 @@ import 'package:popover/popover.dart';
 
 import '../../build_context_x.dart';
 import '../../common.dart';
+import '../../constants.dart';
 import '../../data.dart';
+import '../../globals.dart';
 import '../../player.dart';
 import 'bottom_player_image.dart';
 import 'bottom_player_title_artist.dart';
@@ -17,41 +19,19 @@ class BottomPlayer extends StatelessWidget {
     super.key,
     required this.setFullScreen,
     required this.audio,
-    required this.width,
-    this.color,
     required this.playPrevious,
     required this.playNext,
-    required this.liked,
-    required this.isStarredStation,
-    required this.removeStarredStation,
-    required this.addStarredStation,
-    required this.removeLikedAudio,
-    required this.addLikedAudio,
-    required this.onTextTap,
     this.isVideo,
     required this.videoController,
     required this.isOnline,
   });
 
   final Audio? audio;
-  final double width;
-  final Color? color;
 
   final Future<void> Function() playPrevious;
   final Future<void> Function() playNext;
-  final bool liked;
-
-  final bool isStarredStation;
-  final void Function(String station) removeStarredStation;
-  final void Function(String name, Set<Audio> stations) addStarredStation;
-
-  final void Function(Audio audio, bool notify) removeLikedAudio;
-  final void Function(Audio audio, bool notify) addLikedAudio;
 
   final void Function(bool?) setFullScreen;
-
-  final void Function({required String text, required AudioType audioType})
-      onTextTap;
 
   final bool? isVideo;
   final VideoController videoController;
@@ -60,7 +40,7 @@ class BottomPlayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.t;
-    final veryNarrow = width < 700;
+    final veryNarrow = context.m.size.width < kMasterDetailBreakPoint;
     final active = audio?.path != null || isOnline;
 
     final bottomPlayerImage = BottomPlayerImage(
@@ -73,7 +53,6 @@ class BottomPlayer extends StatelessWidget {
 
     final titleAndArtist = BottomPlayerTitleArtist(
       audio: audio,
-      onTextTap: onTextTap,
     );
 
     final bottomPlayerControls = BottomPlayerControls(
@@ -81,14 +60,16 @@ class BottomPlayer extends StatelessWidget {
       playNext: playNext,
       onFullScreenTap: () => setFullScreen(true),
       active: active,
+      showPlaybackRate: audio?.audioType == AudioType.podcast,
     );
 
     final track = PlayerTrack(
-      superNarrow: veryNarrow,
+      veryNarrow: veryNarrow,
+      active: active,
     );
 
     if (veryNarrow) {
-      return VeryNarrowBottomPlayer(
+      final veryNarrowBottomPlayer = VeryNarrowBottomPlayer(
         setFullScreen: setFullScreen,
         bottomPlayerImage: bottomPlayerImage,
         titleAndArtist: titleAndArtist,
@@ -96,6 +77,17 @@ class BottomPlayer extends StatelessWidget {
         isOnline: isOnline,
         track: track,
       );
+      return isMobile
+          ? GestureDetector(
+              onVerticalDragEnd: (details) {
+                if (details.primaryVelocity != null &&
+                    details.primaryVelocity! < 150) {
+                  setFullScreen(true);
+                }
+              },
+              child: veryNarrowBottomPlayer,
+            )
+          : veryNarrowBottomPlayer;
     }
 
     return SizedBox(
@@ -112,7 +104,7 @@ class BottomPlayer extends StatelessWidget {
             child: Row(
               children: [
                 Flexible(
-                  flex: 3,
+                  flex: 5,
                   child: titleAndArtist,
                 ),
                 const SizedBox(
@@ -121,12 +113,6 @@ class BottomPlayer extends StatelessWidget {
                 Flexible(
                   child: LikeIconButton(
                     audio: audio,
-                    liked: liked,
-                    isStarredStation: isStarredStation,
-                    removeStarredStation: removeStarredStation,
-                    addStarredStation: addStarredStation,
-                    removeLikedAudio: removeLikedAudio,
-                    addLikedAudio: addLikedAudio,
                   ),
                 ),
               ],
@@ -138,7 +124,7 @@ class BottomPlayer extends StatelessWidget {
           Expanded(
             flex: 6,
             child: Padding(
-              padding: const EdgeInsets.only(top: 10, bottom: 10, right: 8),
+              padding: const EdgeInsets.only(top: 10, bottom: 10),
               child: Column(
                 children: [
                   bottomPlayerControls,
@@ -158,9 +144,9 @@ class BottomPlayer extends StatelessWidget {
                 const VolumeSliderPopup(
                   direction: PopoverDirection.top,
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: QueuePopup(audio: audio),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 5),
+                  child: QueueButton(),
                 ),
                 IconButton(
                   icon: Icon(

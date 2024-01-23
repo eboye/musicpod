@@ -1,19 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:yaru/yaru.dart';
 
 import '../../build_context_x.dart';
 import '../../common.dart';
 import '../../constants.dart';
 import '../../data.dart';
+import '../../theme.dart';
+import '../../theme_data_x.dart';
 
 class FullHeightPlayerImage extends StatelessWidget {
   const FullHeightPlayerImage({
     super.key,
     this.audio,
     required this.isOnline,
+    this.fit,
+    this.height,
+    this.width,
+    this.borderRadius,
   });
 
   final Audio? audio;
   final bool isOnline;
+  final BoxFit? fit;
+  final double? height, width;
+  final BorderRadiusGeometry? borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +42,9 @@ class FullHeightPlayerImage extends StatelessWidget {
     if (audio?.pictureData != null) {
       image = Image.memory(
         audio!.pictureData!,
-        height: fullHeightPlayerImageSize,
-        fit: BoxFit.fitWidth,
+        height: height ?? fullHeightPlayerImageSize,
+        width: width ?? fullHeightPlayerImageSize,
+        fit: fit ?? BoxFit.fitWidth,
       );
     } else {
       if (!isOnline) {
@@ -44,36 +55,64 @@ class FullHeightPlayerImage extends StatelessWidget {
         );
       } else if (audio?.imageUrl != null || audio?.albumArtUrl != null) {
         image = Container(
-          height: fullHeightPlayerImageSize,
-          width: fullHeightPlayerImageSize,
+          height: height ?? fullHeightPlayerImageSize,
+          width: width ?? fullHeightPlayerImageSize,
           color: kCardColorNeutral,
           child: SafeNetworkImage(
             url: audio?.imageUrl ?? audio?.albumArtUrl,
             filterQuality: FilterQuality.medium,
-            fit: BoxFit.scaleDown,
+            fit: fit ?? BoxFit.scaleDown,
             fallBackIcon: Icon(
               iconData,
               size: fullHeightPlayerImageSize * 0.7,
               color: theme.hintColor,
             ),
-            height: fullHeightPlayerImageSize,
-            width: fullHeightPlayerImageSize,
+            height: height ?? fullHeightPlayerImageSize,
+            width: width ?? fullHeightPlayerImageSize,
           ),
         );
       } else {
-        image = Icon(
-          iconData,
-          size: fullHeightPlayerImageSize * 0.7,
-          color: theme.hintColor.withOpacity(0.4),
+        image = Container(
+          height: height ?? fullHeightPlayerImageSize,
+          width: width ?? fullHeightPlayerImageSize,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.bottomLeft,
+              end: Alignment.topRight,
+              colors: [
+                getAlphabetColor(
+                  audio?.title ?? audio?.album ?? 'a',
+                ).scale(
+                  lightness: theme.isLight ? 0 : -0.4,
+                  saturation: -0.5,
+                ),
+                getAlphabetColor(
+                  audio?.title ?? audio?.album ?? 'a',
+                ).scale(
+                  lightness: theme.isLight ? -0.1 : -0.2,
+                  saturation: -0.5,
+                ),
+              ],
+            ),
+          ),
+          child: Icon(
+            iconData,
+            size: fullHeightPlayerImageSize * 0.7,
+            color: contrastColor(
+              getAlphabetColor(
+                audio?.title ?? audio?.album ?? 'a',
+              ),
+            ),
+          ),
         );
       }
     }
 
     return SizedBox(
-      height: fullHeightPlayerImageSize,
-      width: fullHeightPlayerImageSize,
+      height: height ?? fullHeightPlayerImageSize,
+      width: width ?? fullHeightPlayerImageSize,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: borderRadius ?? BorderRadius.circular(10),
         child: image,
       ),
     );

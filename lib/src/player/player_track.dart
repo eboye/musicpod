@@ -8,10 +8,11 @@ import 'player_model.dart';
 class PlayerTrack extends StatelessWidget {
   const PlayerTrack({
     super.key,
-    this.superNarrow = false,
+    this.veryNarrow = false,
+    this.active = true,
   });
 
-  final bool superNarrow;
+  final bool veryNarrow, active;
 
   @override
   Widget build(BuildContext context) {
@@ -24,11 +25,13 @@ class PlayerTrack extends StatelessWidget {
     final duration = context.select((PlayerModel m) => m.duration);
     final seek = playerModel.seek;
 
-    bool sliderActive = duration != null &&
-        position != null &&
-        duration.inSeconds > position.inSeconds;
+    bool sliderActive = active &&
+        (duration != null &&
+            position != null &&
+            duration.inSeconds > position.inSeconds);
 
-    const textStyle = TextStyle(fontSize: 12);
+    final textStyle =
+        TextStyle(fontSize: 12, color: !active ? theme.disabledColor : null);
     final slider = SliderTheme(
       data: theme.sliderTheme.copyWith(
         thumbColor: Colors.white,
@@ -39,15 +42,15 @@ class PlayerTrack extends StatelessWidget {
           pressedElevation: 0,
         ),
         minThumbSeparation: 0,
-        trackShape: superNarrow ? const RectangularSliderTrackShape() : null,
-        trackHeight: superNarrow ? 4 : 2,
+        trackShape: veryNarrow ? const RectangularSliderTrackShape() : null,
+        trackHeight: veryNarrow ? 4 : 2,
         inactiveTrackColor: theme.colorScheme.onSurface.withOpacity(0.35),
         activeTrackColor: theme.colorScheme.onSurface.withOpacity(0.8),
         overlayColor: theme.colorScheme.onSurface,
         overlayShape: RoundSliderThumbShape(
           elevation: 3,
-          enabledThumbRadius: superNarrow ? 0 : 5.0,
-          disabledThumbRadius: superNarrow ? 0 : 5.0,
+          enabledThumbRadius: veryNarrow ? 0 : 5.0,
+          disabledThumbRadius: veryNarrow ? 0 : 5.0,
         ),
       ),
       child: RepaintBoundary(
@@ -65,7 +68,7 @@ class PlayerTrack extends StatelessWidget {
       ),
     );
 
-    if (superNarrow) {
+    if (veryNarrow) {
       return SizedBox(width: 1000, child: slider);
     }
 
@@ -75,16 +78,20 @@ class PlayerTrack extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             RepaintBoundary(
-              child: Text(
-                formatTime(position ?? Duration.zero),
-                style: textStyle,
+              child: SizedBox(
+                width: 40,
+                height: 15,
+                child: Text(
+                  formatTime(position ?? Duration.zero),
+                  style: textStyle,
+                ),
               ),
             ),
           ],
         ),
         Expanded(
           child: Padding(
-            padding: EdgeInsets.only(top: superNarrow ? 0 : 3),
+            padding: EdgeInsets.only(top: veryNarrow ? 0 : 3),
             child: slider,
           ),
         ),
@@ -92,9 +99,13 @@ class PlayerTrack extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             RepaintBoundary(
-              child: Text(
-                formatTime(duration ?? Duration.zero),
-                style: textStyle,
+              child: SizedBox(
+                width: 40,
+                height: 15,
+                child: Text(
+                  formatTime(duration ?? Duration.zero),
+                  style: textStyle,
+                ),
               ),
             ),
           ],

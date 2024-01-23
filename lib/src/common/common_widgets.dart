@@ -9,6 +9,7 @@ import 'package:yaru_widgets/yaru_widgets.dart';
 
 import '../../build_context_x.dart';
 import '../../constants.dart';
+import '../../globals.dart' hide isMobile;
 import '../../theme.dart';
 import '../../theme_data_x.dart';
 import 'icons.dart';
@@ -22,11 +23,10 @@ class NavBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     void onTap() {
       if (onPressed == null) {
-        Navigator.maybePop(context);
+        navigatorKey.currentState?.maybePop(context);
       } else {
         onPressed?.call();
-        Future.delayed(const Duration(milliseconds: 400))
-            .then((value) => Navigator.maybePop(context));
+        navigatorKey.currentState?.maybePop(context);
       }
     }
 
@@ -162,12 +162,15 @@ class HeaderBar extends StatelessWidget implements PreferredSizeWidget {
             border: BorderSide.none,
             backgroundColor: backgroundColor,
             style: style,
+            foregroundColor: foregroundColor,
           )
         : AppBar(
+            titleSpacing: titleSpacing,
             centerTitle: true,
             leading: leading,
             title: title,
             actions: actions,
+            foregroundColor: foregroundColor,
           );
   }
 
@@ -226,28 +229,36 @@ class SearchButton extends StatelessWidget {
 }
 
 class SearchingBar extends StatelessWidget {
-  const SearchingBar({super.key, this.text, this.onClear, this.onSubmitted});
+  const SearchingBar({
+    super.key,
+    this.text,
+    this.onClear,
+    this.onSubmitted,
+    this.onChanged,
+  });
 
   final String? text;
   final void Function()? onClear;
   final void Function(String?)? onSubmitted;
+  final void Function(String)? onChanged;
 
   @override
   Widget build(BuildContext context) {
     return yaruStyled
         ? YaruSearchField(
-            radius: const Radius.circular(kYaruButtonRadius),
             clearIcon: yaruStyled ? null : Icon(Iconz().clear),
             key: key,
             text: text,
             onClear: onClear,
             onSubmitted: onSubmitted,
+            onChanged: onChanged,
           )
         : MaterialSearchBar(
             text: text,
             key: key,
             onSubmitted: onSubmitted,
             onClear: onClear,
+            onChanged: onChanged,
           );
   }
 }
@@ -258,10 +269,12 @@ class MaterialSearchBar extends StatefulWidget {
     this.text,
     this.onClear,
     this.onSubmitted,
+    this.onChanged,
   });
   final String? text;
   final void Function()? onClear;
   final void Function(String?)? onSubmitted;
+  final void Function(String)? onChanged;
 
   @override
   State<MaterialSearchBar> createState() => _NormalSearchBarState();
@@ -287,14 +300,21 @@ class _NormalSearchBarState extends State<MaterialSearchBar> {
     return SizedBox(
       height: 38,
       child: TextField(
+        onTap: () {
+          _controller.selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _controller.value.text.length,
+          );
+        },
         controller: _controller,
         key: widget.key,
         autofocus: true,
         onSubmitted: widget.onSubmitted,
+        onChanged: widget.onChanged,
         decoration: InputDecoration(
-          border: const OutlineInputBorder(),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(100)),
           contentPadding:
-              const EdgeInsets.only(top: 10, bottom: 8, left: 10, right: 10),
+              const EdgeInsets.only(top: 10, bottom: 8, left: 15, right: 15),
           filled: true,
           suffixIcon: IconButton(
             onPressed: () {
@@ -354,40 +374,9 @@ EdgeInsetsGeometry get gridPadding =>
 SliverGridDelegate get imageGridDelegate =>
     isMobile ? kMobileImageGridDelegate : kImageGridDelegate;
 
-Gradient? getAudioPageHeaderGradient(ThemeData theme) {
-  if (yaruStyled) {
-    return theme.isLight
-        ? null
-        : LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              Colors.transparent,
-              theme.scaffoldBackgroundColor,
-            ],
-          );
-  }
-
-  return LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [
-      Colors.transparent,
-      theme.colorScheme.primary.withOpacity(0.01),
-      theme.colorScheme.primary.withOpacity(0.02),
-      theme.colorScheme.primary.withOpacity(0.03),
-      theme.colorScheme.primary.withOpacity(0.04),
-      theme.colorScheme.primary.withOpacity(0.05),
-      theme.colorScheme.primary.withOpacity(0.03),
-      theme.colorScheme.primary.withOpacity(0.01),
-      Colors.transparent,
-    ],
-  );
-}
-
 EdgeInsetsGeometry get appBarActionSpacing => Platform.isMacOS
-    ? const EdgeInsets.only(right: 5, left: 40)
-    : const EdgeInsets.only(right: 20, left: 40);
+    ? const EdgeInsets.only(right: 5, left: 20)
+    : const EdgeInsets.only(right: 10, left: 20);
 
 class CommonSwitch extends StatelessWidget {
   const CommonSwitch({super.key, required this.value, this.onChanged});

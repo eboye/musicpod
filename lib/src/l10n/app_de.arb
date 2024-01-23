@@ -40,7 +40,6 @@
     "noPodcastChartsFound": "Entschuldigung, für dieses Land sind keine Charts verfügbar.",
     "noPodcastSubsFound": "Du hast noch keinen Podcast abonniert.",
     "charts": "Charts",
-    "discover": "Entdecken",
     "upNext": "Als nächstes",
     "all": "Alles",
     "arts": "Kunst",
@@ -143,5 +142,18 @@
         }
     },
     "downloadsOnly": "Nur Downloads",
-    "moreOptions": "Mehr Optionen"
+    "moreOptions": "Mehr Optionen",
+    "noRadioServerFound": "Es wurde kein Radio-Server gefunden",
+    "connectedTo": "Verbunden mit",
+    "tryReconnect": "Versuche Neuverbindung",
+    "addedTo": "Hinzugefügt zu",
+    "addToPlaylist": "Zu Wiedergabeliste hinzufügen",
+    "open": "Öffnen",
+    "removeFrom": "Entferne aus",
+    "noCountryFound": "Es konnte kein Land mit diesem Namen gefunden werden. Du kannst auch mit Ländervorwahlen suchen wie +49",
+    "noStarredTags": "Du hast noch keinen Tag mit dem Stern-Button favorisiert.",
+    "name": "Name",
+    "state": "Bundesland",
+    "playNext": "Als Nächstes spielen"
+
 }

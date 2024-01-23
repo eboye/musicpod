@@ -40,7 +40,6 @@
     "noPodcastChartsFound": "Sorry, no charts available for this country or category.",
     "noPodcastSubsFound": "You haven't subscribed to any podcast yet.",
     "charts": "Charts",
-    "discover": "Discover",
     "upNext": "Up next",
     "all": "All",
     "arts": "Arts",
@@ -143,5 +142,17 @@
         }
     },
     "downloadsOnly": "Downloads only",
-    "moreOptions": "More options"
+    "moreOptions": "More options",
+    "noRadioServerFound": "No radio server found",
+    "connectedTo": "Connected to",
+    "tryReconnect": "Try reconnect",
+    "addedTo": "Added to",
+    "addToPlaylist": "Add to playlist",
+    "open": "Open",
+    "removeFrom": "Remove from",
+    "noCountryFound": "No country can be found with this name. You can also use phone prefixes such as +49",
+    "noStarredTags": "You didn't star any tags yet",
+    "name": "Name",
+    "state": "State",
+    "playNext": "Play next"
 }

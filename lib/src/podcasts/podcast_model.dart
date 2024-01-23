@@ -4,8 +4,10 @@ import 'package:collection/collection.dart';
 import 'package:podcast_search/podcast_search.dart';
 import 'package:safe_change_notifier/safe_change_notifier.dart';
 
+import '../../constants.dart';
 import '../../library.dart';
 import '../../podcasts.dart';
+import '../../utils.dart';
 import '../data/podcast_genre.dart';
 
 class PodcastModel extends SafeChangeNotifier {
@@ -101,7 +103,12 @@ class PodcastModel extends SafeChangeNotifier {
     required String updateMessage,
     required bool isOnline,
   }) async {
-    final c = Country.values.firstWhereOrNull((c) => c.code == countryCode);
+    final lastCountryCode = (await readSetting(kLastCountryCode)) as String?;
+
+    _searchActive = _libraryService.podcasts.isEmpty;
+
+    final c = Country.values
+        .firstWhereOrNull((c) => c.code == (lastCountryCode ?? countryCode));
     if (c != null) {
       _country = c;
     }
@@ -121,6 +128,8 @@ class PodcastModel extends SafeChangeNotifier {
       update(updateMessage);
     }
     _firstUpdateChecked = true;
+
+    notifyListeners();
   }
 
   void update(String updateMessage) {
@@ -164,10 +173,10 @@ class PodcastModel extends SafeChangeNotifier {
     super.dispose();
   }
 
-  void search({
+  Future<SearchResult?> search({
     String? searchQuery,
-  }) {
-    _podcastService.search(
+  }) async {
+    return await _podcastService.search(
       searchQuery: searchQuery,
       country: _country,
       podcastGenre: podcastGenre,
